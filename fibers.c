@@ -1,89 +1,53 @@
-#include <linux/module.h>
 #include <linux/kernel.h>
-#include <linux/uaccess.h>
+#include <linux/module.h>
 #include <linux/fs.h>
-#include <linux/cdev.h>
+#include <linux/uaccess.h>
+#include <linux/device.h>
 
+MODULE_LICENSE("GPL");
 
-MODULE_LICENSE("GPL"); 
-MODULE_AUTHOR("Emanuele De Santis <desantis.1664777@studenti.uniroma1.it");
-MODULE_AUTHOR("Maria Ludovica Costagliola <costagliola.1657716@studenti.uniroma1.it");
-MODULE_VERSION("0.1");
+#define foo "fibers"
+#define foolen 4
 
-MODULE_PARM_DESC(content, "Fibers implementation for Linux kernel");
-
-
-static char a[16]="Hello world!!!!";
-static ssize_t a_lenght=sizeof(a);
-
-static ssize_t fibers_dev_read(struct file *file_ptr, char *usr_buffer, size_t count, loff_t *position)
+static ssize_t read_foo(struct file *f, char __user *buf,
+			size_t len, loff_t *off)
 {
-	printk(KERN_DEBUG "%s starting reading from string\n", KBUILD_MODNAME);
-	if (*position >= a_lenght){
-		return 0;
-	}
-	if (*position + count >= a_lenght){
-		count = a_lenght - *position;
-	}
-	if( copy_to_user(usr_buffer, a + *position, count) != 0 )
-        return -EFAULT;    
-    /* Move reading position */
-    *position += count;
-    return count;
+	size_t i = min_t(size_t, len, foolen);
+	return copy_to_user(buf, foo "\n", i) ? -EFAULT : i;
 }
 
+static int major;
+static struct class *class_foo;
+static struct device *dev_foo;
+static struct file_operations f = { .read = read_foo };
 
-
-static struct file_operations fibers_fops =
+int init_module(void)
 {
-	.owner = THIS_MODULE,	
-	.read = fibers_dev_read,
-};
+	void *ptr_err;
+	if ((major = register_chrdev(0, foo, &f)) < 0)
+		return major;
 
-static int major=0;
-static dev_t fiber_dev;
-static struct class *fiber_class;
-static struct cdev *fiber_cdev;
-static struct device *fiber_device;
+	class_foo = class_create(THIS_MODULE, foo);
+	if (IS_ERR(ptr_err = class_foo))
+		goto err2;
 
-static int fibers_init(void)
-{
-	int ret;
-	
-	/*if ((ret = register_chrdev(major, "fibers", &fibers_fops)) < 0){
-		printk(KERN_EMERG "%s cannot allocate a valid major number for the device, exiting...\n", KBUILD_MODNAME);
-		return ret;
-	}
-	major=ret;
-	printk(KERN_DEBUG "%s successfully allocated with major number %d\n", KBUILD_MODNAME, major);*/
-	
-	if ((ret = alloc_chrdev_region(&fiber_dev, 0, 1, "fibers")) < 0){
-		printk(KERN_EMERG "%s problem 1\n", KBUILD_MODNAME);
-		return ret;
-	}
-	fiber_class = class_create(THIS_MODULE, "fibers");
-	cdev_init(fiber_cdev, &fibers_fops);
-	if ((ret = cdev_add(fiber_cdev, fiber_dev, 0)) < 0){
-		printk(KERN_EMERG "%s problem 2\n", KBUILD_MODNAME);
-		return ret;
-	}
-	
-	fiber_device=device_create(fiber_class, NULL, fiber_dev, "fiber", NULL);
-	
+	dev_foo = device_create(class_foo, NULL, MKDEV(major, 0), NULL, foo);
+	if (IS_ERR(ptr_err = dev_foo))
+		goto err;
+
+	/* struct kobject *play_with_this = &dev_foo->kobj; */
+
 	return 0;
+err:
+	class_destroy(class_foo);
+err2:
+	unregister_chrdev(major, foo);
+	return PTR_ERR(ptr_err);
 }
 
-
-static void fibers_exit(void)
+void cleanup_module(void)
 {
-	//unregister_chrdev(major, "fibers");
-	
-	device_destroy(fiber_class, fiber_dev);
-	printk(KERN_DEBUG "%s device deallocated successfully\n", KBUILD_MODNAME);
+	device_destroy(class_foo, MKDEV(major, 0));
+	class_destroy(class_foo);
+	return unregister_chrdev(major, foo);
 }
-
-
-
-
-module_init(fibers_init);
-module_exit(fibers_exit);

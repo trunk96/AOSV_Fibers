@@ -7,13 +7,21 @@
 MODULE_LICENSE("GPL");
 
 #define foo "fibers"
-#define foolen 7
+#define foolen 8
+
+static char fibers[8]="fibers\n";
 
 static ssize_t read_foo(struct file *f, char __user *buf,
 			size_t len, loff_t *off)
 {
+	if (*off >= foolen) return 0;
 	size_t i = min_t(size_t, len, foolen);
-	return copy_to_user(buf, foo "\n", i) ? -EFAULT : i;
+	if (copy_to_user(buf, (fibers+*off), i)){
+		return -EFAULT;
+	}
+	*off+=i;
+	return i;
+
 }
 
 static int major;
@@ -21,7 +29,7 @@ static struct class *class_foo;
 static struct device *dev_foo;
 static struct file_operations f = { .read = read_foo };
 
-int init_module(void)
+int fiber_init(void)
 {
 	void *ptr_err;
 	if ((major = register_chrdev(0, foo, &f)) < 0)
@@ -35,8 +43,6 @@ int init_module(void)
 	if (IS_ERR(ptr_err = dev_foo))
 		goto err;
 
-	/* struct kobject *play_with_this = &dev_foo->kobj; */
-
 	return 0;
 err:
 	class_destroy(class_foo);
@@ -45,9 +51,13 @@ err2:
 	return PTR_ERR(ptr_err);
 }
 
-void cleanup_module(void)
+void fiber_cleanup(void)
 {
 	device_destroy(class_foo, MKDEV(major, 0));
 	class_destroy(class_foo);
 	return unregister_chrdev(major, foo);
 }
+
+
+module_init(fiber_init);
+module_exit(fiber_cleanup);

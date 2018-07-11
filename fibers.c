@@ -6,16 +6,14 @@
 
 MODULE_LICENSE("GPL");
 
-#define foo "fibers"
-#define foolen 8
 
 static char fibers[8]="fibers\n";
 
-static ssize_t read_foo(struct file *f, char __user *buf,
+static ssize_t fibers_read(struct file *f, char __user *buf,
 			size_t len, loff_t *off)
 {
-	if (*off >= foolen) return 0;
-	size_t i = min_t(size_t, len, foolen);
+	if (*off >= sizeof(fibers)) return 0;
+	size_t i = min_t(size_t, len, sizeof(fibers));
 	if (copy_to_user(buf, (fibers+*off), i)){
 		return -EFAULT;
 	}
@@ -24,38 +22,47 @@ static ssize_t read_foo(struct file *f, char __user *buf,
 
 }
 
+
+static long fibers_ioctl (struct file * f, unsigned int cmd, unsigned long arg)
+{
+	return -EINVAL;
+}
+
 static int major;
-static struct class *class_foo;
-static struct device *dev_foo;
-static struct file_operations f = { .read = read_foo };
+static struct class *class_fibers;
+static struct device *dev_fibers;
+static struct file_operations fibers_fops = {
+ .read = fibers_read,
+ .unlocked_ioctl = fibers_ioctl,
+ };
 
 int fiber_init(void)
 {
 	void *ptr_err;
-	if ((major = register_chrdev(0, foo, &f)) < 0)
+	if ((major = register_chrdev(0, "fibers", &fibers_fops)) < 0)
 		return major;
 
-	class_foo = class_create(THIS_MODULE, foo);
-	if (IS_ERR(ptr_err = class_foo))
+	class_fibers = class_create(THIS_MODULE, "fibers");
+	if (IS_ERR(ptr_err = class_fibers))
 		goto err2;
 
-	dev_foo = device_create(class_foo, NULL, MKDEV(major, 0), NULL, foo);
-	if (IS_ERR(ptr_err = dev_foo))
+	dev_fibers = device_create(class_fibers, NULL, MKDEV(major, 0), NULL, "fibers");
+	if (IS_ERR(ptr_err = dev_fibers))
 		goto err;
 
 	return 0;
 err:
-	class_destroy(class_foo);
+	class_destroy(class_fibers);
 err2:
-	unregister_chrdev(major, foo);
+	unregister_chrdev(major, "fibers");
 	return PTR_ERR(ptr_err);
 }
 
 void fiber_cleanup(void)
 {
-	device_destroy(class_foo, MKDEV(major, 0));
-	class_destroy(class_foo);
-	return unregister_chrdev(major, foo);
+	device_destroy(class_fibers, MKDEV(major, 0));
+	class_destroy(class_fibers);
+	return unregister_chrdev(major, "fibers");
 }
 
 

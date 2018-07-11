@@ -7,7 +7,7 @@
 MODULE_LICENSE("GPL");
 
 #define foo "fibers"
-#define foolen 4
+#define foolen 7
 
 static ssize_t read_foo(struct file *f, char __user *buf,
 			size_t len, loff_t *off)

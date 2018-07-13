@@ -16,7 +16,7 @@ static char string_major[MAJOR_MAX_LEN]="";
 static struct file_operations fibers_fops = {
  .read = fibers_read,
  .unlocked_ioctl = fibers_ioctl,
- };
+};
 
 
 int register_fiber_device(void)
@@ -77,7 +77,8 @@ static long fibers_ioctl (struct file * f, unsigned int cmd, unsigned long arg)
 
 static ssize_t fibers_read(struct file *f, char __user *buf, size_t len, loff_t *off)
 {
-	if (*off >= strnlen(string_major, MAJOR_MAX_LEN)) return 0;
+	if (*off >= strnlen(string_major, MAJOR_MAX_LEN))
+    return 0;
 	size_t i = min_t(size_t, len, strnlen(string_major, MAJOR_MAX_LEN));
 	if (copy_to_user(buf, (string_major+*off), i)){
 		return -EFAULT;

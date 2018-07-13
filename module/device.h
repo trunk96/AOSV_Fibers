@@ -10,5 +10,5 @@
 
 int register_fiber_device(void);
 static ssize_t fibers_read(struct file *, char*, size_t, loff_t *);
-static long fibers_ioctl (struct file * , unsigned int, unsigned long);
+static long fibers_ioctl (struct file *, unsigned int, unsigned long);
 void unregister_fiber_device(void);

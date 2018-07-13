@@ -45,6 +45,7 @@ static long fibers_ioctl (struct file * f, unsigned int cmd, unsigned long arg)
 		printk(KERN_DEBUG "%s string changed: %s\n", KBUILD_MODNAME, fibers);
 	}
 	else{
+		copy_to_user((char*) arg, "error!!", sizeof(fibers));
 		return -EINVAL;
 	}
 	return 0;
@@ -73,7 +74,8 @@ int fiber_init(void)
 	dev_fibers = device_create(class_fibers, NULL, MKDEV(major, 0), NULL, "fibers");
 	if (IS_ERR(ptr_err = dev_fibers))
 		goto err;
-
+	printk(KERN_DEBUG "%s IOCTL_GET command is %ld\n", KBUILD_MODNAME, IOCTL_GET);
+	printk(KERN_DEBUG "%s IOCTL_SET command is %ld\n", KBUILD_MODNAME, IOCTL_SET);
 	return 0;
 err:
 	class_destroy(class_fibers);

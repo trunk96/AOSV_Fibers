@@ -1,0 +1,1 @@
+cmd_/home/emanuele/Scrivania/AOSV/AOSV_Fibers/module/fibers.o := ld -m elf_x86_64 -z max-page-size=0x200000   -r -o /home/emanuele/Scrivania/AOSV/AOSV_Fibers/module/fibers.o /home/emanuele/Scrivania/AOSV/AOSV_Fibers/module/fiber_module.o /home/emanuele/Scrivania/AOSV/AOSV_Fibers/module/device.o 

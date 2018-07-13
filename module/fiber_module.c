@@ -7,13 +7,13 @@
 MODULE_LICENSE("GPL");
 
 static int fiber_init(void){
-  //register the device as /dev/fibers
-  register_fiber_device();
-  return 0;
+        //register the device as /dev/fibers
+        register_fiber_device();
+        return 0;
 }
 
 static void fiber_cleanup(void){
-  unregister_fiber_device();
+        unregister_fiber_device();
 }
 
 module_init(fiber_init);

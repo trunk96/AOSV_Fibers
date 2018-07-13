@@ -56,7 +56,7 @@ static long fibers_ioctl (struct file * f, unsigned int cmd, unsigned long arg)
 {
         if (cmd == IOCTL_CONVERT_THREAD_TO_FIBER) {
                 //arg has no sense in this context
-                do_ConvertThreadToFiber();
+                return do_ConvertThreadToFiber();
         }
         else if (cmd == IOCTL_CREATE_FIBER) {
                 struct fiber_arguments fa;

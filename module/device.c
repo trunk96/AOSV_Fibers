@@ -115,7 +115,6 @@ static long fibers_ioctl (struct file * f, unsigned int cmd, unsigned long arg)
         else {
                 return -EINVAL;
         }
-        return 0;
 }
 
 

@@ -3,11 +3,17 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/device.h>
+#include <linux/ioctl.h>
+#include "fibers.h"
 
 MODULE_LICENSE("GPL");
 
-
 static char fibers[8]="fibers\n";
+
+static int major;
+
+#define IOCTL_SET _IOW(major, 0, char*)
+#define IOCTL_GET _IOW(major, 1, char*)
 
 static ssize_t fibers_read(struct file *f, char __user *buf,
 			size_t len, loff_t *off)
@@ -25,16 +31,34 @@ static ssize_t fibers_read(struct file *f, char __user *buf,
 
 static long fibers_ioctl (struct file * f, unsigned int cmd, unsigned long arg)
 {
-	return -EINVAL;
+	if (cmd==IOCTL_GET){
+		if(copy_to_user((char*) arg, fibers, sizeof(fibers))){
+			return -EFAULT;
+		}
+		printk(KERN_DEBUG "%s string requested: %s\n", KBUILD_MODNAME, fibers);
+	}
+	else if (IOCTL_SET){
+		if (copy_from_user(fibers, (char*) arg, sizeof(fibers))){
+			return -EFAULT;
+		}
+		fibers[sizeof(fibers)-1]='\0';
+		printk(KERN_DEBUG "%s string changed: %s\n", KBUILD_MODNAME, fibers);
+	}
+	else{
+		return -EINVAL;
+	}
+	return 0;
 }
 
-static int major;
+
 static struct class *class_fibers;
 static struct device *dev_fibers;
 static struct file_operations fibers_fops = {
  .read = fibers_read,
  .unlocked_ioctl = fibers_ioctl,
  };
+
+
 
 int fiber_init(void)
 {

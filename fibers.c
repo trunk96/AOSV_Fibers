@@ -37,7 +37,7 @@ static long fibers_ioctl (struct file * f, unsigned int cmd, unsigned long arg)
 		}
 		printk(KERN_DEBUG "%s string requested: %s\n", KBUILD_MODNAME, fibers);
 	}
-	else if (IOCTL_SET){
+	else if(cmd==IOCTL_SET){
 		if (copy_from_user(fibers, (char*) arg, sizeof(fibers))){
 			return -EFAULT;
 		}

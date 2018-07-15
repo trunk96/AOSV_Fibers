@@ -4,7 +4,7 @@
 #include <linux/uaccess.h>
 #include <linux/device.h>
 #include <linux/ioctl.h>
-#include "fibers.h"
+
 
 MODULE_LICENSE("GPL");
 
@@ -13,7 +13,7 @@ static char fibers[8]="fibers\n";
 static int major;
 
 #define IOCTL_SET _IOW(major, 0, char*)
-#define IOCTL_GET _IOR(major, 1, char*)
+#define IOCTL_GET _IOW(major, 1, char*)
 
 static ssize_t fibers_read(struct file *f, char __user *buf,
 			size_t len, loff_t *off)

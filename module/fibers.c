@@ -1,4 +1,4 @@
-#import "fibers.h"
+#include "fibers.h"
 
 long do_ConvertThreadToFiber(void)
 {
@@ -20,7 +20,8 @@ unsigned long do_FlsAlloc(void)
         return 0;
 }
 
-long do_FlsFree(unsigned long index){
+long do_FlsFree(unsigned long index)
+{
         return 0;
 }
 

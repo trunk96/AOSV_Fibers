@@ -76,7 +76,7 @@ static long fibers_ioctl (struct file * f, unsigned int cmd, unsigned long arg)
                 if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
                         return -EFAULT;
                 }
-                return (long) do_SwitchToFiber(fa.fiber_address);
+                return do_SwitchToFiber(fa.fiber_address);
         }
         else if (cmd == IOCTL_FLS_ALLOC) {
                 //arg has no sense in this context
@@ -90,7 +90,7 @@ static long fibers_ioctl (struct file * f, unsigned int cmd, unsigned long arg)
                 if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
                         return -EFAULT;
                 }
-                return (long) do_FlsFree(fa.index);
+                return do_FlsFree(fa.index);
         }
         else if (cmd == IOCTL_FLS_GETVALUE) {
                 struct fiber_arguments fa;
@@ -110,7 +110,7 @@ static long fibers_ioctl (struct file * f, unsigned int cmd, unsigned long arg)
                 if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
                         return -EFAULT;
                 }
-                return (long) do_FlsSetValue(fa.index, fa.value);
+                return do_FlsSetValue(fa.index, fa.value);
         }
         else {
                 return -EINVAL;

@@ -6,12 +6,12 @@
 #include "device.h"
 #include "fibers.h"
 
-#define MAJOR_MAX_LEN 256
+#define MESSAGE_MAX_LEN 256
 
 static long major;
 static struct class *class_fibers;
 static struct device *dev_fibers;
-static char string_major[MAJOR_MAX_LEN] = "";
+static char string_message[MESSAGE_MAX_LEN] = "";
 
 
 static struct file_operations fibers_fops = {
@@ -34,7 +34,14 @@ int register_fiber_device(void)
         if (IS_ERR(ptr_err = dev_fibers))
                 goto err;
         printk(KERN_DEBUG "%s Device successfully registered in /dev/fibers with major number %ld\n", KBUILD_MODNAME, major);
-        snprintf(string_major, MAJOR_MAX_LEN, "%ld", major);
+        snprintf(string_message, MESSAGE_MAX_LEN, "%ld\n%ld\n%ld\n%ld\n%ld\n%ld\n%ld\0",
+              IOCTL_CONVERT_THREAD_TO_FIBER,
+              IOCTL_CREATE_FIBER,
+              IOCTL_SWITCH_TO_FIBER,
+              IOCTL_FLS_ALLOC,
+              IOCTL_FLS_FREE,
+              IOCTL_FLS_GETVALUE,
+              IOCTL_FLS_SETVALUE);
         return 0;
 
 err:
@@ -120,10 +127,10 @@ static long fibers_ioctl (struct file * f, unsigned int cmd, unsigned long arg)
 
 static ssize_t fibers_read(struct file *f, char __user *buf, size_t len, loff_t *off)
 {
-        if (*off >= strnlen(string_major, MAJOR_MAX_LEN))
+        if (*off >= strnlen(string_message, MESSAGE_MAX_LEN))
                 return 0;
-        size_t i = min_t(size_t, len, strnlen(string_major, MAJOR_MAX_LEN));
-        if (copy_to_user(buf, (string_major+*off), i)) {
+        size_t i = min_t(size_t, len, strnlen(string_message, MESSAGE_MAX_LEN));
+        if (copy_to_user(buf, (string_message+*off), i)) {
                 return -EFAULT;
         }
         *off += i;

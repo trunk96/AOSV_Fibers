@@ -13,7 +13,7 @@ static char fibers[8]="fibers\n";
 static int major;
 
 #define IOCTL_SET _IOW(major, 0, char*)
-#define IOCTL_GET _IOW(major, 1, char*)
+#define IOCTL_GET _IOR(major, 1, char*)
 
 static ssize_t fibers_read(struct file *f, char __user *buf,
 			size_t len, loff_t *off)
@@ -45,6 +45,7 @@ static long fibers_ioctl (struct file * f, unsigned int cmd, unsigned long arg)
 		printk(KERN_DEBUG "%s string changed: %s\n", KBUILD_MODNAME, fibers);
 	}
 	else{
+		printk(KERN_DEBUG "%s invalid!!!", KBUILD_MODNAME);
 		copy_to_user((char*) arg, "error!!", sizeof(fibers));
 		return -EINVAL;
 	}

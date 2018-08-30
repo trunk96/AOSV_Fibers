@@ -584,9 +584,15 @@ deps_/home/emanuele/Scrivania/AOSV/AOSV_Fibers/module/device.o := \
   include/linux/vmalloc.h \
   arch/x86/include/uapi/asm/vsyscall.h \
   include/asm-generic/fixmap.h \
+  arch/x86/include/asm/hardirq.h \
+    $(wildcard include/config/kvm/intel.h) \
+    $(wildcard include/config/have/kvm.h) \
+    $(wildcard include/config/x86/thermal/vector.h) \
+    $(wildcard include/config/x86/mce/threshold.h) \
+    $(wildcard include/config/x86/mce/amd.h) \
+    $(wildcard include/config/hyperv.h) \
   arch/x86/include/asm/io_apic.h \
   arch/x86/include/asm/irq_vectors.h \
-    $(wildcard include/config/have/kvm.h) \
     $(wildcard include/config/pci/msi.h) \
   include/linux/rcuwait.h \
   include/linux/rcu_sync.h \

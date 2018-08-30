@@ -19,6 +19,13 @@ static struct file_operations fibers_fops = {
         .unlocked_ioctl = fibers_ioctl,
 };
 
+static char *fiber_user_devnode(struct device *dev, umode_t *mode)
+{
+      if (mode)
+		          *mode = 0666;
+	    return kasprintf(GFP_KERNEL, "%s", dev_name(dev));
+}
+
 
 int register_fiber_device(void)
 {
@@ -29,6 +36,7 @@ int register_fiber_device(void)
         class_fibers = class_create(THIS_MODULE, "fibers");
         if (IS_ERR(ptr_err = class_fibers))
                 goto err2;
+        class_fibers->devnode = fiber_user_devnode;
 
         dev_fibers = device_create(class_fibers, NULL, MKDEV(major, 0), NULL, "fibers");
         if (IS_ERR(ptr_err = dev_fibers))

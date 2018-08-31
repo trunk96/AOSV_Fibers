@@ -16,6 +16,12 @@ struct fiber{
   //and all the other information we need.
 };
 
+struct process{
+  //here we have to implement an hash table to mantain all the processes
+  //that the module handles in each moment. Each struct process will
+  //be linked to a list of struct fiber that belong to that process.
+};
+
 
 long do_ConvertThreadToFiber(void);
 void * do_CreateFiber(unsigned long, void *, void *);

@@ -21,9 +21,9 @@ static struct file_operations fibers_fops = {
 
 static char *fiber_user_devnode(struct device *dev, umode_t *mode)
 {
-      if (mode)
-		          *mode = 0666;
-	    return kasprintf(GFP_KERNEL, "%s", dev_name(dev));
+        if (mode)
+                *mode = 0666;
+        return kasprintf(GFP_KERNEL, "%s", dev_name(dev));
 }
 
 
@@ -43,13 +43,13 @@ int register_fiber_device(void)
                 goto err;
         printk(KERN_DEBUG "%s Device successfully registered in /dev/fibers with major number %ld\n", KBUILD_MODNAME, major);
         snprintf(string_message, MESSAGE_MAX_LEN, "%ld\n%ld\n%ld\n%ld\n%ld\n%ld\n%ld\0",
-              IOCTL_CONVERT_THREAD_TO_FIBER,
-              IOCTL_CREATE_FIBER,
-              IOCTL_SWITCH_TO_FIBER,
-              IOCTL_FLS_ALLOC,
-              IOCTL_FLS_FREE,
-              IOCTL_FLS_GETVALUE,
-              IOCTL_FLS_SETVALUE);
+                 IOCTL_CONVERT_THREAD_TO_FIBER,
+                 IOCTL_CREATE_FIBER,
+                 IOCTL_SWITCH_TO_FIBER,
+                 IOCTL_FLS_ALLOC,
+                 IOCTL_FLS_FREE,
+                 IOCTL_FLS_GETVALUE,
+                 IOCTL_FLS_SETVALUE);
         return 0;
 
 err:

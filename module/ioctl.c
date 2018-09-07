@@ -7,7 +7,7 @@
 
 char string_message[MESSAGE_MAX_LEN] = "";
 
-void publish_ioctl_message ()
+void publish_ioctl_message()
 {
   snprintf(string_message, MESSAGE_MAX_LEN, "%ld\n%ld\n%ld\n%ld\n%ld\n%ld\n%ld\0",
         IOCTL_CONVERT_THREAD_TO_FIBER,
@@ -19,7 +19,7 @@ void publish_ioctl_message ()
         IOCTL_FLS_SETVALUE);
 }
 
-static long fibers_ioctl (struct file * f, unsigned int cmd, unsigned long arg)
+static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
 {
         if (cmd == IOCTL_CONVERT_THREAD_TO_FIBER) {
                 //arg has no sense in this context

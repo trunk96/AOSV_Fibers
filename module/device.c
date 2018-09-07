@@ -20,9 +20,9 @@ static struct file_operations fibers_fops = {
 
 static char *fiber_user_devnode(struct device *dev, umode_t *mode)
 {
-      if (mode)
-		          *mode = 0666;
-	    return kasprintf(GFP_KERNEL, "%s", dev_name(dev));
+        if (mode)
+                *mode = 0666;
+        return kasprintf(GFP_KERNEL, "%s", dev_name(dev));
 }
 
 

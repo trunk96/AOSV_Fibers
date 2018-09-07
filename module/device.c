@@ -1,35 +1,35 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
+#include <linux/module.h>
 #include <linux/device.h>
-#include <linux/ioctl.h>
 #include <linux/string.h>
 #include "device.h"
-#include "fibers.h"
 
-#define MESSAGE_MAX_LEN 256
 
-static long major;
+
+long major=0;
 static struct class *class_fibers;
 static struct device *dev_fibers;
-static char string_message[MESSAGE_MAX_LEN] = "";
+
 
 
 static struct file_operations fibers_fops = {
         .read = fibers_read,
-        .unlocked_ioctl = fibers_ioctl,
+        //.unlocked_ioctl = ioctl_function    ioctl_function is not constant, so we have to add it later
 };
 
 static char *fiber_user_devnode(struct device *dev, umode_t *mode)
 {
-        if (mode)
-                *mode = 0666;
-        return kasprintf(GFP_KERNEL, "%s", dev_name(dev));
+      if (mode)
+		          *mode = 0666;
+	    return kasprintf(GFP_KERNEL, "%s", dev_name(dev));
 }
 
 
 int register_fiber_device(void)
 {
         void *ptr_err;
+        fibers_fops.unlocked_ioctl = ioctl_function;
         if ((major = register_chrdev(0, "fibers", &fibers_fops)) < 0)
                 return major;
 
@@ -42,14 +42,8 @@ int register_fiber_device(void)
         if (IS_ERR(ptr_err = dev_fibers))
                 goto err;
         printk(KERN_DEBUG "%s Device successfully registered in /dev/fibers with major number %ld\n", KBUILD_MODNAME, major);
-        snprintf(string_message, MESSAGE_MAX_LEN, "%ld\n%ld\n%ld\n%ld\n%ld\n%ld\n%ld\0",
-                 IOCTL_CONVERT_THREAD_TO_FIBER,
-                 IOCTL_CREATE_FIBER,
-                 IOCTL_SWITCH_TO_FIBER,
-                 IOCTL_FLS_ALLOC,
-                 IOCTL_FLS_FREE,
-                 IOCTL_FLS_GETVALUE,
-                 IOCTL_FLS_SETVALUE);
+        //publish ioctl cmds here
+        publish_message();
         return 0;
 
 err:
@@ -67,70 +61,6 @@ void unregister_fiber_device(void)
 }
 
 
-static long fibers_ioctl (struct file * f, unsigned int cmd, unsigned long arg)
-{
-        if (cmd == IOCTL_CONVERT_THREAD_TO_FIBER) {
-                //arg has no sense in this context
-                return do_ConvertThreadToFiber();
-        }
-        else if (cmd == IOCTL_CREATE_FIBER) {
-                struct fiber_arguments fa;
-                if (!access_ok(VERIFY_READ, arg, sizeof(struct fiber_arguments))) {
-                        return -EFAULT;
-                }
-                if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
-                        return -EFAULT;
-                }
-                return (long) do_CreateFiber(fa.stack_size, fa.start_function_address, fa.start_function_arguments);
-        }
-        else if (cmd == IOCTL_SWITCH_TO_FIBER) {
-                struct fiber_arguments fa;
-                if (!access_ok(VERIFY_READ, arg, sizeof(struct fiber_arguments))) {
-                        return -EFAULT;
-                }
-                if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
-                        return -EFAULT;
-                }
-                return do_SwitchToFiber(fa.fiber_address);
-        }
-        else if (cmd == IOCTL_FLS_ALLOC) {
-                //arg has no sense in this context
-                return do_FlsAlloc();
-        }
-        else if (cmd == IOCTL_FLS_FREE) {
-                struct fiber_arguments fa;
-                if (!access_ok(VERIFY_READ, arg, sizeof(struct fiber_arguments))) {
-                        return -EFAULT;
-                }
-                if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
-                        return -EFAULT;
-                }
-                return do_FlsFree(fa.index);
-        }
-        else if (cmd == IOCTL_FLS_GETVALUE) {
-                struct fiber_arguments fa;
-                if (!access_ok(VERIFY_READ, arg, sizeof(struct fiber_arguments))) {
-                        return -EFAULT;
-                }
-                if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
-                        return -EFAULT;
-                }
-                return (long) do_FlsGetValue(fa.index);
-        }
-        else if (cmd == IOCTL_FLS_SETVALUE) {
-                struct fiber_arguments fa;
-                if (!access_ok(VERIFY_READ, arg, sizeof(struct fiber_arguments))) {
-                        return -EFAULT;
-                }
-                if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
-                        return -EFAULT;
-                }
-                return do_FlsSetValue(fa.index, fa.value);
-        }
-        else {
-                return -EINVAL;
-        }
-}
 
 
 static ssize_t fibers_read(struct file *f, char __user *buf, size_t len, loff_t *off)

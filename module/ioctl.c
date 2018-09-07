@@ -5,8 +5,6 @@
 #include "ioctl.h"
 
 
-MODULE_LICENSE("GPL");
-
 
 #define IOCTL_CONVERT_THREAD_TO_FIBER _IO(major, 0)
 #define IOCTL_CREATE_FIBER _IOW(major, 1, void*)

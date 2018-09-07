@@ -7,3 +7,4 @@ Module.symvers
 modules.order
 .cache.mk
 .tmp_versions
+*.ghc

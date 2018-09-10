@@ -41,6 +41,6 @@ int main()
   for (i = 0; i < 7; i++){
     printf("%ld\n", ioctl_numbers[i]);
   }
-  ret = ioctl(fd, ioctl_numbers[IOCTL_FLS_ALLOC], 0);
+  ret = ioctl(fd, ioctl_numbers[IOCTL_CONVERT_THREAD_TO_FIBER], 0);
   printf("ret value is %ld\n", ret);
 }

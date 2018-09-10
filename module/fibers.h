@@ -5,6 +5,9 @@
 
 
 #define MAX_FLS_POINTERS 256
+#define FLS_BITMAP_SIZE MAX_FLS_POINTERS/sizeof(long)
+
+extern struct hlist_head processes;
 
 struct fiber_arguments {
         //this struct is used in order to pass arguments to the IOCTL call
@@ -41,7 +44,7 @@ struct fiber {
         struct fpu; //https://elixir.bootlin.com/linux/latest/source/arch/s390/include/asm/fpu/types.h#L14
 
         struct fls_data fls[MAX_FLS_POINTERS];
-        long fls_bitmap[MAX_FLS_POINTERS/sizeof(long)];
+        long fls_bitmap[FLS_BITMAP_SIZE];
 };
 
 //typedef struct { long counter; } atomic_long_t; //used to give a new fiber_id each time
@@ -76,3 +79,8 @@ unsigned long do_FlsAlloc(unsigned long, pid_t);
 long do_FlsFree(unsigned long, pid_t);
 void * do_FlsGetValue(unsigned long, pid_t);
 long do_FlsSetValue(unsigned long, void *, pid_t);
+
+
+void init_process(struct process *, struct hlist_head);
+void init_thread(struct thread *, struct process *, struct hlist_head, pid_t);
+void init_fiber(struct fiber *, struct process *, struct list_head);

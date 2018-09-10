@@ -1,10 +1,12 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/hashtable.h>
 #include "device.h"
 
 
 
 MODULE_LICENSE("GPL");
+DEFINE_HASHTABLE(processes, 10);
 
 static int fiber_init(void){
         //register the device as /dev/fibers

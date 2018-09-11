@@ -2,12 +2,15 @@
 #include <linux/spinlock.h>
 #include <asm/fpu/types.h>
 #include <asm/fpu/internal.h>
+#include <linux/string.h>
+
 
 
 #define MAX_FLS_POINTERS 256
 #define FLS_BITMAP_SIZE MAX_FLS_POINTERS/sizeof(long)
+#define H_SZ 1024
 
-extern struct hlist_head processes;
+//extern struct hlist_head processes;
 
 struct fiber_arguments {
         //this struct is used in order to pass arguments to the IOCTL call
@@ -34,14 +37,15 @@ struct fiber {
         //and all the other information we need.
         spinlock_t fiber_lock;
         unsigned long flags;
-        unsigned long fiber_id; //key for the hashtable fibers
+        pid_t fiber_id; //key for the hashtable fibers
         struct hlist_node node;
         struct thread *attached_thread; //NULL if no thread executes this fiber
         struct process *parent_process;
 
         //CPU context
         //...
-        struct fpu; //https://elixir.bootlin.com/linux/latest/source/arch/s390/include/asm/fpu/types.h#L14
+        struct fpu fpu;
+        /*https://elixir.bootlin.com/linux/latest/source/arch/s390/include/asm/fpu/types.h#L14*/
 
         struct fls_data fls[MAX_FLS_POINTERS];
         long fls_bitmap[FLS_BITMAP_SIZE];
@@ -54,17 +58,17 @@ struct process {
         //that the module handles in each moment. Each struct process will
         //be linked to a list of struct fiber that belong to that process.
 
-        unsigned long process_id; //key for the hashtable ???
+        pid_t process_id; //key for the hashtable ???
         struct hlist_node node;
         atomic_long_t last_fiber_id;
-        struct hlist_head threads;
-        struct hlist_head fibers;
+        DECLARE_HASHTABLE(threads, 10);
+        DECLARE_HASHTABLE(fibers, 10);
 
 };
 
 struct thread {
 
-        unsigned long thread_id; //key for the hashtable threads
+        pid_t thread_id; //key for the hashtable threads
         struct hlist_node node;
         struct process *parent;
         struct fiber *selected_fiber;
@@ -81,6 +85,11 @@ void * do_FlsGetValue(unsigned long, pid_t);
 long do_FlsSetValue(unsigned long, void *, pid_t);
 
 
-void init_process(struct process *, struct hlist_head);
-void init_thread(struct thread *, struct process *, struct hlist_head, pid_t);
-void init_fiber(struct fiber *, struct process *, struct list_head);
+
+
+
+
+
+//void init_process(struct process *, struct hlist_head *);
+//void init_thread(struct thread *, struct process *, struct hlist_head *, pid_t);
+//void init_fiber(struct fiber *, struct process *, struct list_head *);

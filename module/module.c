@@ -6,7 +6,6 @@
 
 
 MODULE_LICENSE("GPL");
-DEFINE_HASHTABLE(processes, 10);
 
 static int fiber_init(void){
         //register the device as /dev/fibers

@@ -42,5 +42,5 @@ int main()
     printf("%ld\n", ioctl_numbers[i]);
   }
   ret = ioctl(fd, ioctl_numbers[IOCTL_CONVERT_THREAD_TO_FIBER], 0);
-  printf("ret value is %ld\n", ret);
+  printf("ret value is %ld, PID is %d\n", ret, getpid());
 }

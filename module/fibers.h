@@ -3,20 +3,22 @@
 #include <asm/fpu/types.h>
 #include <asm/fpu/internal.h>
 #include <linux/string.h>
-
+#include <asm/processor.h>
 
 
 #define MAX_FLS_POINTERS 256
 #define FLS_BITMAP_SIZE MAX_FLS_POINTERS/sizeof(long)
 #define H_SZ 1024
 
-//extern struct hlist_head processes;
+
+typedef void(*user_function_t)(void *param);
+
 
 struct fiber_arguments {
         //this struct is used in order to pass arguments to the IOCTL call
         //packing all we need in a void*
         unsigned long stack_size;
-        void *start_function_address;
+        user_function_t start_function_address;
         void *start_function_arguments;
         void *fiber_address;
         unsigned long index;
@@ -42,16 +44,17 @@ struct fiber {
         struct thread *attached_thread; //NULL if no thread executes this fiber
         struct process *parent_process;
 
+
         //CPU context
         //...
-        struct fpu fpu;
-        /*https://elixir.bootlin.com/linux/latest/source/arch/s390/include/asm/fpu/types.h#L14*/
+        struct pt_regs registers; //copy of the pt_regs struct that points into the kernel level stack
+        struct fpu fpu; // to replace in task_struct->struct_thread->fpu upon context switch
+        /*https://elixir.bootlin.com/linux/latest/source/arch/x86/include/asm/fpu/types.h/*/
 
         struct fls_data fls[MAX_FLS_POINTERS];
         long fls_bitmap[FLS_BITMAP_SIZE];
 };
 
-//typedef struct { long counter; } atomic_long_t; //used to give a new fiber_id each time
 
 struct process {
         //here we have to implement an hash table to mantain all the processes
@@ -77,7 +80,7 @@ struct thread {
 
 
 long do_ConvertThreadToFiber(pid_t);
-void * do_CreateFiber(unsigned long, void *, void *, pid_t);
+void * do_CreateFiber(unsigned long, user_function_t, void *, pid_t);
 long do_SwitchToFiber(void *, pid_t);
 unsigned long do_FlsAlloc(unsigned long, pid_t);
 long do_FlsFree(unsigned long, pid_t);

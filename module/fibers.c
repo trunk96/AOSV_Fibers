@@ -26,8 +26,8 @@ long do_ConvertThreadToFiber(pid_t thread_id)
                 init_process(ep, processes);
                 init_thread(gp, ep, ep->threads, thread_id);
                 init_fiber(fp, ep, ep->fibers);
-                printk(KERN_DEBUG "%s created a fiber with fiber id %d", KBUILD_MODNAME, fp->fiber_id);
-                return fp->fiber_id;
+                printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
+                return (long)fp;
         }
         //if found==1 then we found the process, and it is saved into e
 
@@ -49,11 +49,11 @@ long do_ConvertThreadToFiber(pid_t thread_id)
         }
         init_thread(gp, ep, ep->threads, thread_id);
         init_fiber(fp, ep, ep->fibers);
-        printk(KERN_DEBUG "%s created a fiber with fiber id %d", KBUILD_MODNAME, fp->fiber_id);
-        return fp->fiber_id;
+        printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
+        return (long) fp;
 }
 
-void * do_CreateFiber(unsigned long stack_size, void *start_address, void *parameters, pid_t thread_id)
+void * do_CreateFiber(unsigned long stack_size, user_function_t fiber_function, void __user *parameters, pid_t thread_id)
 {
         printk(KERN_EMERG "CIAO");
         return 100;

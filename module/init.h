@@ -22,7 +22,8 @@
                 f->parent_process = parent;       \
                 memset((char*)&(f->fpu), 0, sizeof(struct fpu));    \
                 memset(f->fls, 0, sizeof(struct fls_data)*MAX_FLS_POINTERS);                 \
-                memset(f->fls_bitmap, 0, FLS_BITMAP_SIZE);                            \
+                memset(f->fls_bitmap, 0, FLS_BITMAP_SIZE);                                   \
+                memset((char*)&(f->registers), 0, sizeof(struct pt_regs));                            \
                 f->fiber_id = atomic64_inc_return(&(parent->last_fiber_id));  \
                 hash_add_rcu(ht, &(f->node), f->fiber_id);                             \
 } while(0)

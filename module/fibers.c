@@ -1,7 +1,9 @@
 #include "fibers.h"
 #include "init.h"
 #include <linux/kernel.h>
+#include <linux/sched.h>
 #include <asm/switch_to.h>
+
 
 
 DEFINE_HASHTABLE(processes, 10);
@@ -149,6 +151,45 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         //end of critical section
         spin_unlock_irqrestore(&(f->fiber_lock), flags);
         printk(KERN_DEBUG "%s exited from critical section\n", KBUILD_MODNAME);
+
+
+        //preemption must be disabled!!!!
+        preempt_disable();
+
+        struct task_struct *next = current;
+
+        struct task_struct *prev = kmalloc(sizeof(struct task_struct), GFP_KERNEL);
+        memcpy(prev, current, sizeof(struct task_struct));
+
+        //install new CPU registers
+        struct pt_regs *next_regs = task_pt_regs(next);
+        memcpy(next_regs, &(f->registers), sizeof(struct pt_regs));
+
+
+        //install new FPU registers
+        struct thread_struct *next_thread = &(next->thread);
+        memcpy(&(next_thread->fpu), &(f->fpu), sizeof(struct fpu));
+
+        switch_to(prev, next, prev);
+
+        //collect old CPU registers
+        struct pt_regs *old_regs = task_pt_regs(prev);
+        struct fiber *prev_fiber = tp->selected_fiber;
+        memcpy(&(prev_fiber->registers), old_regs, sizeof(struct pt_regs));
+
+
+        //collect old FPU registers
+        struct thread_struct *prev_thread = &(prev->thread);
+        memcpy(&(prev_fiber->fpu), &(prev_thread->fpu), sizeof(struct fpu));
+
+        //register that the fiber is changed
+        tp->selected_fiber = f;
+
+        //re-enable preemption here
+        preempt_enable();
+
+        kfree(prev);
+
         return 0;
 
 

@@ -1,6 +1,7 @@
 #include "fibers.h"
 #include "init.h"
 #include <linux/kernel.h>
+#include <asm/switch_to.h>
 
 
 DEFINE_HASHTABLE(processes, 10);
@@ -78,20 +79,20 @@ void * do_ConvertThreadToFiber(pid_t thread_id)
                 init_thread(gp, ep, ep->threads, thread_id);
                 init_fiber(fp, ep, ep->fibers, -1);
                 fp->attached_thread = gp;
-                printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
+                printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
                 return fp->fiber_id;
         }
         //if ep!=NULL then we found the process
 
         gp = find_thread_by_pid(thread_id, ep);
         if (gp != NULL) {
-                printk(KERN_DEBUG "%s Thread with id %d is already a fiber, but it calls ConvertThreadToFiber", KBUILD_MODNAME, thread_id);
+                printk(KERN_DEBUG "%s Thread with id %d is already a fiber, but it calls ConvertThreadToFiber\n", KBUILD_MODNAME, thread_id);
                 return -1;
         }
         init_thread(gp, ep, ep->threads, thread_id);
         init_fiber(fp, ep, ep->fibers, -1);
         fp->attached_thread = gp;
-        printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
+        printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
         return fp->fiber_id;
 }
 
@@ -114,7 +115,7 @@ void * do_CreateFiber(unsigned long stack_size, user_function_t fiber_function, 
         init_fiber(fp, ep, ep->fibers, stack_size);
         fp->registers.ip = (long) fiber_function;
         fp->registers.di = (long) parameters; //passing the first parameter into %rdi (System V AMD64 ABI)
-        printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
+        printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
         return fp->fiber_id;
 }
 
@@ -147,7 +148,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         f->attached_thread = tp;
         //end of critical section
         spin_unlock_irqrestore(&(f->fiber_lock), flags);
-        printk(KERN_DEBUG "%s exited from critical section", KBUILD_MODNAME);
+        printk(KERN_DEBUG "%s exited from critical section\n", KBUILD_MODNAME);
         return 0;
 
 

@@ -37,7 +37,7 @@ static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
                 if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
                         return -EFAULT;
                 }
-                printk(KERN_DEBUG "%s fa.stacksize is %ld, fa.start_function_address is %ld", KBUILD_MODNAME, fa.stack_size, (long)fa.start_function_address);
+                printk(KERN_DEBUG "%s fa.stacksize is %ld, fa.start_function_address is %ld\n", KBUILD_MODNAME, fa.stack_size, (long)fa.start_function_address);
                 return (long) do_CreateFiber(fa.stack_size, fa.start_function_address, fa.start_function_arguments, thread_id);
         }
         else if (cmd == IOCTL_SWITCH_TO_FIBER) {

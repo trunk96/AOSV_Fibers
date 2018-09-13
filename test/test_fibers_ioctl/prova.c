@@ -19,6 +19,9 @@ typedef enum IOCTL_TYPE{
 
 
 void myfunction(void * parameters){
+  while(1){
+    printf("ciao\n");
+  }
   return;
 }
 

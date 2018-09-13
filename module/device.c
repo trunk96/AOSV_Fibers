@@ -41,7 +41,7 @@ int register_fiber_device(void)
         dev_fibers = device_create(class_fibers, NULL, MKDEV(major, 0), NULL, "fibers");
         if (IS_ERR(ptr_err = dev_fibers))
                 goto err;
-        printk(KERN_DEBUG "%s Device successfully registered in /dev/fibers with major number %ld\n", KBUILD_MODNAME, major);
+        printk(KERN_DEBUG "[%s] Device successfully registered in /dev/fibers with major number %ld\n", KBUILD_MODNAME, major);
         //publish ioctl cmds here
         publish_message();
         return 0;

@@ -2,7 +2,68 @@
 #include "init.h"
 #include <linux/kernel.h>
 
+
 DEFINE_HASHTABLE(processes, 10);
+
+
+struct process * find_process_by_tgid(pid_t tgid)
+{
+        int found = 0;
+        struct process *ep;
+        hash_for_each_possible_rcu(processes, ep, node, tgid){
+                if(ep == NULL) {
+                        found = 0;
+                        break;
+                }
+                if (ep->process_id == tgid) {
+                        found = 1;
+                        break;
+                }
+        }
+        if (found)
+                return ep;
+        return NULL;
+}
+
+
+struct thread * find_thread_by_pid(pid_t pid, struct process *ep)
+{
+        int found = 0;
+        struct thread *tp;
+        hash_for_each_possible_rcu(ep->threads, tp, node, pid){
+                if(tp == NULL) {
+                        found = 0;
+                        break;
+                }
+                if (tp->thread_id == pid) {
+                        found = 1;
+                        break;
+                }
+        }
+        if (found)
+                return tp;
+        return NULL;
+
+}
+
+struct fiber * find_fiber_by_id(pid_t fiber_id, struct process *ep)
+{
+        int found = 0;
+        struct fiber *fp;
+        hash_for_each_possible_rcu(ep->fibers, fp, node, fiber_id){
+                if(fp == NULL) {
+                        found = 0;
+                        break;
+                }
+                if (fp->fiber_id == fiber_id) {
+                        found = 1;
+                        break;
+                }
+        }
+        if (found)
+                return fp;
+        return NULL;
+}
 
 void * do_ConvertThreadToFiber(pid_t thread_id)
 {
@@ -10,47 +71,28 @@ void * do_ConvertThreadToFiber(pid_t thread_id)
         struct process *ep;
         struct thread *gp;
         struct fiber *fp;
-        int found = 0;
-        hash_for_each_possible_rcu(processes, ep, node, current->tgid){
-                if(ep == NULL) {
-                        found = 0;
-                        break;
-                }
-                if (ep->process_id == current->tgid) {
-                        found = 1;
-                        break;
-                }
-        }
-        //if found==0 then it is the first time the process calls our module
-        if (!found) {
+        ep = find_process_by_tgid(current->tgid);
+        //if ep==NULL then it is the first time the process calls our module
+        if (ep == NULL) {
                 init_process(ep, processes);
                 init_thread(gp, ep, ep->threads, thread_id);
                 init_fiber(fp, ep, ep->fibers, -1);
+                fp->attached_thread = gp;
                 printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
-                return fp;
+                return fp->fiber_id;
         }
-        //if found==1 then we found the process, and it is saved into e
+        //if ep!=NULL then we found the process
 
-        found = 0;
-        hash_for_each_possible_rcu(ep->threads, gp, node, thread_id){
-                if(gp == NULL) {
-                        found = 0;
-                        break;
-                }
-                if (gp->thread_id == thread_id) {
-                        found = 1;
-                        break;
-                }
-        }
-
-        if (found) {
+        gp = find_thread_by_pid(thread_id, ep);
+        if (gp != NULL) {
                 printk(KERN_DEBUG "%s Thread with id %d is already a fiber, but it calls ConvertThreadToFiber", KBUILD_MODNAME, thread_id);
                 return -1;
         }
         init_thread(gp, ep, ep->threads, thread_id);
         init_fiber(fp, ep, ep->fibers, -1);
+        fp->attached_thread = gp;
         printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
-        return fp;
+        return fp->fiber_id;
 }
 
 void * do_CreateFiber(unsigned long stack_size, user_function_t fiber_function, void __user *parameters, pid_t thread_id)
@@ -58,34 +100,13 @@ void * do_CreateFiber(unsigned long stack_size, user_function_t fiber_function, 
         struct process *ep;
         struct thread *gp;
         struct fiber *fp;
-        int found = 0;
-        hash_for_each_possible_rcu(processes, ep, node, current->tgid){
-                if(ep == NULL) {
-                        found = 0;
-                        break;
-                }
-                if (ep->process_id == current->tgid) {
-                        found = 1;
-                        break;
-                }
-        }
-        if (!found) {
+        ep = find_process_by_tgid(current->tgid);
+        if (ep == NULL) {
                 return -2;  //-2 means that the thread calling CreateFiber is not a fiber itself.
         }
 
-        found = 0;
-        hash_for_each_possible_rcu(ep->threads, gp, node, thread_id){
-                if(gp == NULL) {
-                        found = 0;
-                        break;
-                }
-                if (gp->thread_id == thread_id) {
-                        found = 1;
-                        break;
-                }
-        }
-
-        if (!found) {
+        gp = find_thread_by_pid(thread_id, ep);
+        if (gp == NULL) {
                 return -2; //-2 means that the thread calling CreateFiber is not a fiber itself.
         }
 
@@ -93,12 +114,43 @@ void * do_CreateFiber(unsigned long stack_size, user_function_t fiber_function, 
         init_fiber(fp, ep, ep->fibers, stack_size);
         fp->registers.ip = (long) fiber_function;
         fp->registers.di = (long) parameters; //passing the first parameter into %rdi (System V AMD64 ABI)
-        return fp;
+        printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
+        return fp->fiber_id;
 }
 
-long do_SwitchToFiber(void * fiber_address, pid_t thread_id)
+long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
 {
-        return 2; //never returns
+
+        unsigned long flags;
+        struct process *ep;
+        struct thread *tp;
+
+        ep = find_process_by_tgid(current->tgid);
+
+        if(ep == NULL)
+                return -1;
+
+        tp = find_thread_by_pid(thread_id, ep);
+
+        if (tp == NULL)
+                return -1;
+
+        struct fiber *f = find_fiber_by_id(fiber_id, ep);
+
+        if (f == NULL)
+                return -1;
+
+        spin_lock_irqsave(&(f->fiber_lock), flags);
+        //critical section
+        if (f->attached_thread != NULL)
+                return -1;
+        f->attached_thread = tp;
+        //end of critical section
+        spin_unlock_irqrestore(&(f->fiber_lock), flags);
+        printk(KERN_DEBUG "%s exited from critical section", KBUILD_MODNAME);
+        return 0;
+
+
 }
 
 unsigned long do_FlsAlloc(unsigned long alloc_size, pid_t thread_id)

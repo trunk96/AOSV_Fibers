@@ -21,7 +21,7 @@ struct fiber_arguments {
         unsigned long stack_size;
         user_function_t start_function_address;
         void *start_function_arguments;
-        void *fiber_address;
+        pid_t fiber_id;
         unsigned long index;
         void *value;
         unsigned long alloc_size;
@@ -86,7 +86,7 @@ struct thread {
 
 void * do_ConvertThreadToFiber(pid_t);
 void * do_CreateFiber(unsigned long, user_function_t, void *, pid_t);
-long do_SwitchToFiber(void *, pid_t);
+long do_SwitchToFiber(pid_t, pid_t);
 unsigned long do_FlsAlloc(unsigned long, pid_t);
 long do_FlsFree(unsigned long, pid_t);
 void * do_FlsGetValue(unsigned long, pid_t);

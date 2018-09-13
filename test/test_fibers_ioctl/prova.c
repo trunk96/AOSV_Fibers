@@ -55,6 +55,9 @@ int main()
     .start_function_arguments = &ciao,
   };
   ret = ioctl(fd, ioctl_numbers[IOCTL_CONVERT_THREAD_TO_FIBER], 0);
-  ret = ioctl(fd, ioctl_numbers[IOCTL_CREATE_FIBER], &fa);
-  printf("ret value is %ld, PID is %d\n myfunction is in address %ld\n", ret, getpid(), (long)myfunction);
+  pid_t addr = (unsigned long) ioctl(fd, ioctl_numbers[IOCTL_CREATE_FIBER], &fa);
+  fa.fiber_id = addr ;
+  printf("ret value is %d, PID is %d\n myfunction is in address %lu\n", addr, getpid(), (unsigned long)myfunction);
+  ret = ioctl(fd, ioctl_numbers[IOCTL_SWITCH_TO_FIBER], &fa);
+  //printf("ret value is %ld, PID is %d\n myfunction is in address %ld\n", ret, getpid(), (long)myfunction);
 }

@@ -7,7 +7,7 @@ struct fiber_arguments {
         unsigned long stack_size;
         user_function_t start_function_address;
         void *start_function_arguments;
-        void *fiber_address;
+        pid_t fiber_id;
         unsigned long index;
         void *value;
         unsigned long alloc_size;

@@ -48,7 +48,7 @@ static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
                 if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
                         return -EFAULT;
                 }
-                return do_SwitchToFiber(fa.fiber_address, thread_id);
+                return do_SwitchToFiber(fa.fiber_id, thread_id);
         }
         else if (cmd == IOCTL_FLS_ALLOC) {
                 struct fiber_arguments fa;

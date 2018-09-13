@@ -27,16 +27,17 @@ static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
 
         if (cmd == IOCTL_CONVERT_THREAD_TO_FIBER) {
                 //arg has no sense in this context
-                return do_ConvertThreadToFiber(thread_id);
+                return (long) do_ConvertThreadToFiber(thread_id);
         }
         else if (cmd == IOCTL_CREATE_FIBER) {
                 struct fiber_arguments fa;
-                /*if (!access_ok(VERIFY_READ, arg, sizeof(struct fiber_arguments))) {
+                if (!access_ok(VERIFY_READ, arg, sizeof(struct fiber_arguments))) {
                         return -EFAULT;
-                   }
-                   if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
+                }
+                if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
                         return -EFAULT;
-                   }*/
+                }
+                printk(KERN_DEBUG "%s fa.stacksize is %ld, fa.start_function_address is %ld", KBUILD_MODNAME, fa.stack_size, (long)fa.start_function_address);
                 return (long) do_CreateFiber(fa.stack_size, fa.start_function_address, fa.start_function_arguments, thread_id);
         }
         else if (cmd == IOCTL_SWITCH_TO_FIBER) {

@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include "prova.h"
 
 
 typedef enum IOCTL_TYPE{
@@ -15,6 +16,11 @@ typedef enum IOCTL_TYPE{
   IOCTL_FLS_GETVALUE,
   IOCTL_FLS_SETVALUE
 } ioctl_type_t;
+
+
+void myfunction(void * parameters){
+  return;
+}
 
 
 int main()
@@ -41,6 +47,14 @@ int main()
   for (i = 0; i < 7; i++){
     printf("%ld\n", ioctl_numbers[i]);
   }
+
+  long ciao = 1;
+  struct fiber_arguments fa = {
+    .stack_size = 1,
+    .start_function_address = myfunction,
+    .start_function_arguments = &ciao,
+  };
   ret = ioctl(fd, ioctl_numbers[IOCTL_CONVERT_THREAD_TO_FIBER], 0);
-  printf("ret value is %ld, PID is %d\n", ret, getpid());
+  ret = ioctl(fd, ioctl_numbers[IOCTL_CREATE_FIBER], &fa);
+  printf("ret value is %ld, PID is %d\n myfunction is in address %ld\n", ret, getpid(), (long)myfunction);
 }

@@ -7,8 +7,9 @@
 
 
 #define MAX_FLS_POINTERS 256
-#define FLS_BITMAP_SIZE MAX_FLS_POINTERS/sizeof(long)
+#define FLS_BITMAP_SIZE MAX_FLS_POINTERS/(8*sizeof(long))
 #define H_SZ 1024
+#define DEFAULT_STACK_SIZE 1
 
 
 typedef void(*user_function_t)(void *param);
@@ -51,6 +52,10 @@ struct fiber {
         struct fpu fpu; // to replace in task_struct->struct_thread->fpu upon context switch
         /*https://elixir.bootlin.com/linux/latest/source/arch/x86/include/asm/fpu/types.h/*/
 
+
+        void *fiber_stack;
+        unsigned long fiber_stack_size;
+
         struct fls_data fls[MAX_FLS_POINTERS];
         long fls_bitmap[FLS_BITMAP_SIZE];
 };
@@ -79,7 +84,7 @@ struct thread {
 };
 
 
-long do_ConvertThreadToFiber(pid_t);
+void * do_ConvertThreadToFiber(pid_t);
 void * do_CreateFiber(unsigned long, user_function_t, void *, pid_t);
 long do_SwitchToFiber(void *, pid_t);
 unsigned long do_FlsAlloc(unsigned long, pid_t);

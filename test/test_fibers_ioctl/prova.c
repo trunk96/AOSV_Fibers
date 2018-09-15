@@ -18,9 +18,11 @@ typedef enum IOCTL_TYPE{
 } ioctl_type_t;
 
 
-void myfunction(void * parameters){
+void myfunction(void* parameters){
+  long counter = 0;
+  char * character = (char *) parameters;
   while(1){
-    printf("ciao\n");
+    printf("character is %c, %ld\n", *character, counter++);
   }
   return;
 }
@@ -51,16 +53,20 @@ int main()
     printf("%ld\n", ioctl_numbers[i]);
   }
 
-  long ciao = 1;
+  char ciao = 'd';
   struct fiber_arguments fa = {
     .stack_size = 1,
     .start_function_address = myfunction,
-    .start_function_arguments = &ciao,
+    .start_function_arguments = (void*)(&ciao),
   };
   ret = ioctl(fd, ioctl_numbers[IOCTL_CONVERT_THREAD_TO_FIBER], 0);
+
+  fa.stack_pointer = malloc(4096*2*sizeof(char));
+  printf("stack_pointer is %lu\n", (unsigned long) fa.stack_pointer);
   pid_t addr = (unsigned long) ioctl(fd, ioctl_numbers[IOCTL_CREATE_FIBER], &fa);
-  fa.fiber_id = addr ;
+  fa.fiber_id = addr;
   printf("ret value is %d, PID is %d\n myfunction is in address %lu\n", addr, getpid(), (unsigned long)myfunction);
+
   ret = ioctl(fd, ioctl_numbers[IOCTL_SWITCH_TO_FIBER], &fa);
   //printf("ret value is %ld, PID is %d\n myfunction is in address %ld\n", ret, getpid(), (long)myfunction);
 }

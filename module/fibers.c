@@ -6,6 +6,7 @@
 
 
 
+
 DEFINE_HASHTABLE(processes, 10);
 
 
@@ -79,7 +80,9 @@ void * do_ConvertThreadToFiber(pid_t thread_id)
         if (ep == NULL) {
                 init_process(ep, processes);
                 init_thread(gp, ep, ep->threads, thread_id);
-                init_fiber(fp, ep, ep->fibers, -1);
+                init_fiber(fp, ep, ep->fibers, -1, 0);
+                fp->registers.sp = task_pt_regs(current)->sp;
+                fp->registers.bp = task_pt_regs(current)->bp;
                 fp->attached_thread = gp;
                 printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
                 return fp->fiber_id;
@@ -92,13 +95,15 @@ void * do_ConvertThreadToFiber(pid_t thread_id)
                 return -1;
         }
         init_thread(gp, ep, ep->threads, thread_id);
-        init_fiber(fp, ep, ep->fibers, -1);
+        init_fiber(fp, ep, ep->fibers, -1, 0);
+        fp->registers.sp = task_pt_regs(current)->sp;
+        fp->registers.bp = task_pt_regs(current)->bp;
         fp->attached_thread = gp;
         printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
         return fp->fiber_id;
 }
 
-void * do_CreateFiber(unsigned long stack_size, user_function_t fiber_function, void __user *parameters, pid_t thread_id)
+void * do_CreateFiber(void *stack_pointer, unsigned long stack_size, user_function_t fiber_function, void __user *parameters, pid_t thread_id)
 {
         struct process *ep;
         struct thread *gp;
@@ -114,7 +119,7 @@ void * do_CreateFiber(unsigned long stack_size, user_function_t fiber_function, 
         }
 
         //we are sure that the thread calling CreateFiber is a fiber, so we can create a new fiber
-        init_fiber(fp, ep, ep->fibers, stack_size);
+        init_fiber(fp, ep, ep->fibers, stack_size, stack_pointer);
         fp->registers.ip = (long) fiber_function;
         fp->registers.di = (long) parameters; //passing the first parameter into %rdi (System V AMD64 ABI)
         printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
@@ -153,42 +158,41 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         printk(KERN_DEBUG "%s exited from critical section\n", KBUILD_MODNAME);
 
 
-        //preemption must be disabled!!!!
+        /* note - this code may work, if not ask to Alessandro Pellegrini*/
+
+        //kernel_fpu_begin();
         preempt_disable();
+        struct pt_regs *prev_regs = task_pt_regs(current);
+        if (tp->selected_fiber != NULL ) {
+                struct fiber * prev_fiber = tp->selected_fiber;
 
-        struct task_struct *next = current;
+                //save previous CPU registers in the previous fiber
+                memcpy(&(prev_fiber->registers), prev_regs, sizeof(struct pt_regs));
 
-        struct task_struct *prev = kmalloc(sizeof(struct task_struct), GFP_KERNEL);
-        memcpy(prev, current, sizeof(struct task_struct));
+                /*//save previous FPU registers in the previous fiber
+                   struct fpu *prev_fpu = &(current->thread.fpu);
+                   memcpy(&(prev_fiber->fpu), prev_fpu, sizeof(struct fpu));*/
 
-        //install new CPU registers
-        struct pt_regs *next_regs = task_pt_regs(next);
-        memcpy(next_regs, &(f->registers), sizeof(struct pt_regs));
+                //restore next CPU registers in the current thread CPU context
+                struct pt_regs *next_regs = &(f->registers);
+                memcpy(prev_regs, next_regs, sizeof(struct pt_regs));
 
+                /*//restore next FPU registers in the current thread FPU context
+                   struct fpu *next_fpu = &(f->fpu);
+                   memcpy(prev_fpu, next_fpu, sizeof(struct fpu));*/
 
-        //install new FPU registers
-        struct thread_struct *next_thread = &(next->thread);
-        memcpy(&(next_thread->fpu), &(f->fpu), sizeof(struct fpu));
+                //kernel_fpu_end();
 
-        switch_to(prev, next, prev);
-
-        //collect old CPU registers
-        struct pt_regs *old_regs = task_pt_regs(prev);
-        struct fiber *prev_fiber = tp->selected_fiber;
-        memcpy(&(prev_fiber->registers), old_regs, sizeof(struct pt_regs));
-
-
-        //collect old FPU registers
-        struct thread_struct *prev_thread = &(prev->thread);
-        memcpy(&(prev_fiber->fpu), &(prev_thread->fpu), sizeof(struct fpu));
-
-        //register that the fiber is changed
-        tp->selected_fiber = f;
-
-        //re-enable preemption here
+        }
+        else{
+                /*struct pt_regs *next_regs = &(f->registers);
+                memcpy(prev_regs, next_regs, sizeof(struct pt_regs));*/
+                prev_regs->sp = f->registers.sp;
+                prev_regs->bp = f->registers.bp;
+                prev_regs->ip = f->registers.ip;
+                prev_regs->di = f->registers.di;
+        }
         preempt_enable();
-
-        kfree(prev);
 
         return 0;
 

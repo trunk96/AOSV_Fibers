@@ -18,6 +18,7 @@ typedef void(*user_function_t)(void *param);
 struct fiber_arguments {
         //this struct is used in order to pass arguments to the IOCTL call
         //packing all we need in a void*
+        void *stack_pointer;
         unsigned long stack_size;
         user_function_t start_function_address;
         void *start_function_arguments;
@@ -85,7 +86,7 @@ struct thread {
 
 
 void * do_ConvertThreadToFiber(pid_t);
-void * do_CreateFiber(unsigned long, user_function_t, void *, pid_t);
+void * do_CreateFiber(void *, unsigned long, user_function_t, void *, pid_t);
 long do_SwitchToFiber(pid_t, pid_t);
 unsigned long do_FlsAlloc(unsigned long, pid_t);
 long do_FlsFree(unsigned long, pid_t);

@@ -85,7 +85,7 @@ void * do_ConvertThreadToFiber(pid_t thread_id)
                 //these two lines to override init_fiber behaviour in case of a yet existing line of execution
                 fp->registers.sp = task_pt_regs(current)->sp;
                 fp->registers.bp = task_pt_regs(current)->bp;
-                
+
                 fp->attached_thread = gp;
                 gp->selected_fiber = fp;
                 printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
@@ -201,6 +201,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
                 prev_regs->di = f->registers.di;
                 tp->first_switch = 0;
         }
+        tp->selected_fiber = f;
         preempt_enable();
 
         return 0;

@@ -12,6 +12,7 @@
                 t->thread_id = id;                       \
                 t->parent = parent_process;                      \
                 t->selected_fiber = NULL;                \
+                t->first_switch = 1;                     \
                 hash_add_rcu(ht, &(t->node), id);         \
 } while(0)
 

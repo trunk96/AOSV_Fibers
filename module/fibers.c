@@ -81,9 +81,13 @@ void * do_ConvertThreadToFiber(pid_t thread_id)
                 init_process(ep, processes);
                 init_thread(gp, ep, ep->threads, thread_id);
                 init_fiber(fp, ep, ep->fibers, -1, 0);
+
+                //these two lines to override init_fiber behaviour in case of a yet existing line of execution
                 fp->registers.sp = task_pt_regs(current)->sp;
                 fp->registers.bp = task_pt_regs(current)->bp;
+                
                 fp->attached_thread = gp;
+                gp->selected_fiber = fp;
                 printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
                 return fp->fiber_id;
         }
@@ -96,10 +100,14 @@ void * do_ConvertThreadToFiber(pid_t thread_id)
         }
         init_thread(gp, ep, ep->threads, thread_id);
         init_fiber(fp, ep, ep->fibers, -1, 0);
+
+        //these two lines to override init_fiber behaviour in case of a yet existing line of execution
         fp->registers.sp = task_pt_regs(current)->sp;
         fp->registers.bp = task_pt_regs(current)->bp;
+
         fp->attached_thread = gp;
-        printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
+        gp->selected_fiber = fp;
+        printk(KERN_DEBUG "[%s] created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
         return fp->fiber_id;
 }
 
@@ -122,7 +130,7 @@ void * do_CreateFiber(void *stack_pointer, unsigned long stack_size, user_functi
         init_fiber(fp, ep, ep->fibers, stack_size, stack_pointer);
         fp->registers.ip = (long) fiber_function;
         fp->registers.di = (long) parameters; //passing the first parameter into %rdi (System V AMD64 ABI)
-        printk(KERN_DEBUG "%s created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
+        printk(KERN_DEBUG "[%s] created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
         return fp->fiber_id;
 }
 
@@ -163,16 +171,16 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         //kernel_fpu_begin();
         preempt_disable();
         struct pt_regs *prev_regs = task_pt_regs(current);
-        if (tp->selected_fiber != NULL ) {
-                struct fiber * prev_fiber = tp->selected_fiber;
+        struct fiber * prev_fiber = tp->selected_fiber;
 
-                //save previous CPU registers in the previous fiber
-                memcpy(&(prev_fiber->registers), prev_regs, sizeof(struct pt_regs));
+        //save previous CPU registers in the previous fiber
+        memcpy(&(prev_fiber->registers), prev_regs, sizeof(struct pt_regs));
 
-                /*//save previous FPU registers in the previous fiber
-                   struct fpu *prev_fpu = &(current->thread.fpu);
-                   memcpy(&(prev_fiber->fpu), prev_fpu, sizeof(struct fpu));*/
+        /*//save previous FPU registers in the previous fiber
+           struct fpu *prev_fpu = &(current->thread.fpu);
+           memcpy(&(prev_fiber->fpu), prev_fpu, sizeof(struct fpu));*/
 
+        if (tp->first_switch != 1) {
                 //restore next CPU registers in the current thread CPU context
                 struct pt_regs *next_regs = &(f->registers);
                 memcpy(prev_regs, next_regs, sizeof(struct pt_regs));
@@ -185,12 +193,13 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
 
         }
         else{
-                /*struct pt_regs *next_regs = &(f->registers);
-                memcpy(prev_regs, next_regs, sizeof(struct pt_regs));*/
+                //in this case we are the first real fiber to run on that thread, so
+                //we copy only the useful registers in the CPU
                 prev_regs->sp = f->registers.sp;
                 prev_regs->bp = f->registers.bp;
                 prev_regs->ip = f->registers.ip;
                 prev_regs->di = f->registers.di;
+                tp->first_switch = 0;
         }
         preempt_enable();
 

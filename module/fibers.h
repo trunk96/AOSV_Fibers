@@ -81,6 +81,7 @@ struct thread {
         struct hlist_node node;
         struct process *parent;
         struct fiber *selected_fiber;
+        int first_switch;
 
 };
 

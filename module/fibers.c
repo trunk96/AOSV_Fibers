@@ -174,39 +174,54 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         struct fiber * prev_fiber = tp->selected_fiber;
 
         //save previous CPU registers in the previous fiber
-        memcpy(&(prev_fiber->registers), prev_regs, sizeof(struct pt_regs));
+        prev_fiber->registers.r15 = prev_regs->r15;
+        prev_fiber->registers.r14 = prev_regs->r14;
+        prev_fiber->registers.r13 = prev_regs->r13;
+        prev_fiber->registers.r12 = prev_regs->r12;
+        prev_fiber->registers.r11 = prev_regs->r11;
+        prev_fiber->registers.r10 = prev_regs->r10;
+        prev_fiber->registers.r9 = prev_regs->r9;
+        prev_fiber->registers.r8 = prev_regs->r8;
+        prev_fiber->registers.ax = prev_regs->ax;
+        prev_fiber->registers.bx = prev_regs->bx;
+        prev_fiber->registers.cx = prev_regs->cx;
+        prev_fiber->registers.dx = prev_regs->dx;
+        prev_fiber->registers.si = prev_regs->si;
+        prev_fiber->registers.di = prev_regs->di;
+        prev_fiber->registers.sp = prev_regs->sp;
+        prev_fiber->registers.bp = prev_regs->bp;
+        prev_fiber->registers.ip = prev_regs->ip;
+
+        tp->selected_fiber->attached_thread = NULL;
 
         /*//save previous FPU registers in the previous fiber
            struct fpu *prev_fpu = &(current->thread.fpu);
            memcpy(&(prev_fiber->fpu), prev_fpu, sizeof(struct fpu));*/
 
-        if (tp->first_switch != 1) {
-                //restore next CPU registers in the current thread CPU context
-                struct pt_regs *next_regs = &(f->registers);
-                memcpy(prev_regs, next_regs, sizeof(struct pt_regs));
+        //restore next CPU context from the next fibers_read
+        prev_regs->r15 = f->registers.r15;
+        prev_regs->r14 = f->registers.r14;
+        prev_regs->r13 = f->registers.r13;
+        prev_regs->r12 = f->registers.r12;
+        prev_regs->r11 = f->registers.r11;
+        prev_regs->r10 = f->registers.r10;
+        prev_regs->r9 = f->registers.r9;
+        prev_regs->r8 = f->registers.r8;
+        prev_regs->ax = f->registers.ax;
+        prev_regs->bx = f->registers.bx;
+        prev_regs->cx = f->registers.cx;
+        prev_regs->dx = f->registers.dx;
+        prev_regs->si = f->registers.si;
+        prev_regs->di = f->registers.di;
+        prev_regs->sp = f->registers.sp;
+        prev_regs->bp = f->registers.bp;
+        prev_regs->ip = f->registers.ip;
 
-                /*//restore next FPU registers in the current thread FPU context
-                   struct fpu *next_fpu = &(f->fpu);
-                   memcpy(prev_fpu, next_fpu, sizeof(struct fpu));*/
-
-                //kernel_fpu_end();
-
-        }
-        else{
-                //in this case we are the first real fiber to run on that thread, so
-                //we copy only the useful registers in the CPU
-                prev_regs->sp = f->registers.sp;
-                prev_regs->bp = f->registers.bp;
-                prev_regs->ip = f->registers.ip;
-                prev_regs->di = f->registers.di;
-                tp->first_switch = 0;
-        }
         tp->selected_fiber = f;
+
         preempt_enable();
 
         return 0;
-
-
 }
 
 unsigned long do_FlsAlloc(unsigned long alloc_size, pid_t thread_id)

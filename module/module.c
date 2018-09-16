@@ -15,7 +15,7 @@ static int fiber_init(void){
 
 static void fiber_cleanup(void){
         unregister_fiber_device();
-        printk(KERN_DEBUG "%s successfully removed!\n", KBUILD_MODNAME);
+        printk(KERN_DEBUG "[%s] successfully removed!\n", KBUILD_MODNAME);
 }
 
 module_init(fiber_init);

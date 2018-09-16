@@ -27,8 +27,8 @@ void myfunction(void* parameters){
     .fiber_id = 1,
   };
   while(1){
-    printf("%ld\n", counter++);
-    if (counter == 100000){
+    printf("Ora %c, %ld\n", *character, counter++);
+    if (counter == 10){
       long ret = ioctl(fd, ioctl_numbers[IOCTL_SWITCH_TO_FIBER], &fa2);
       if (ret == -1){
         printf("FBIDBVCIDBVCOSDNOVNADPNVOADNVOADNVONDOVNAONVOADNVONADOVNADONVOADN\n");
@@ -38,6 +38,32 @@ void myfunction(void* parameters){
     //printf("character is %c, %ld\n", *character, counter++);
   }
   return;
+}
+
+
+
+
+void myfunction2 (void* parameters){
+  long counter = 0;
+  char * character = (char *) parameters;
+  struct fiber_arguments fa2 = {
+    .stack_size = 1,
+    .start_function_address = myfunction,
+    .start_function_arguments = (void*)(character),
+  };
+  fa2.stack_pointer = malloc(4096*2*sizeof(char));
+  pid_t addr = (unsigned long) ioctl(fd, ioctl_numbers[IOCTL_CREATE_FIBER], &fa2);
+  fa2.fiber_id = addr;
+  while(1){
+    printf("%c, %ld\n", *character, counter++);
+    if (counter == 10){
+      long ret = ioctl(fd, ioctl_numbers[IOCTL_SWITCH_TO_FIBER], &fa2);
+      if (ret == -1){
+        printf("FBIDBVCIDBVCOSDNOVNADPNVOADNVOADNVONDOVNAONVOADNVONADOVNADONVOADN\n");
+        break;
+      }
+    }
+  }
 }
 
 
@@ -68,7 +94,7 @@ int main()
   char ciao = 'd';
   struct fiber_arguments fa = {
     .stack_size = 1,
-    .start_function_address = myfunction,
+    .start_function_address = myfunction2,
     .start_function_arguments = (void*)(&ciao),
   };
   ret = ioctl(fd, ioctl_numbers[IOCTL_CONVERT_THREAD_TO_FIBER], 0);

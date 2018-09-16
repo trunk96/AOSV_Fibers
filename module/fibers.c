@@ -198,7 +198,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
            struct fpu *prev_fpu = &(current->thread.fpu);
            memcpy(&(prev_fiber->fpu), prev_fpu, sizeof(struct fpu));*/
 
-        //restore next CPU context from the next fibers_read
+        //restore next CPU context from the next fiber
         prev_regs->r15 = f->registers.r15;
         prev_regs->r14 = f->registers.r14;
         prev_regs->r13 = f->registers.r13;

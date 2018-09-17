@@ -85,8 +85,8 @@ struct thread {
 };
 
 
-void * do_ConvertThreadToFiber(pid_t);
-void * do_CreateFiber(void *, unsigned long, user_function_t, void *, pid_t);
+pid_t do_ConvertThreadToFiber(pid_t);
+pid_t do_CreateFiber(void *, unsigned long, user_function_t, void *, pid_t);
 long do_SwitchToFiber(pid_t, pid_t);
 long do_FlsAlloc(unsigned long, pid_t);
 long do_FlsFree(unsigned long, pid_t);

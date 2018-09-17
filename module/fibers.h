@@ -70,6 +70,7 @@ struct process {
         pid_t process_id; //key for the hashtable ???
         struct hlist_node node;
         atomic_long_t last_fiber_id;
+        atomic_long_t active_threads;
         DECLARE_HASHTABLE(threads, 10);
         DECLARE_HASHTABLE(fibers, 10);
 
@@ -81,7 +82,6 @@ struct thread {
         struct hlist_node node;
         struct process *parent;
         struct fiber *selected_fiber;
-        int first_switch;
 
 };
 
@@ -95,11 +95,6 @@ void * do_FlsGetValue(unsigned long, pid_t);
 long do_FlsSetValue(unsigned long, void *, pid_t);
 
 
-
-
-
-
-
-//void init_process(struct process *, struct hlist_head *);
-//void init_thread(struct thread *, struct process *, struct hlist_head *, pid_t);
-//void init_fiber(struct fiber *, struct process *, struct list_head *);
+struct process * find_process_by_tgid(pid_t);
+struct thread * find_thread_by_pid(pid_t, struct process *);
+struct fiber * find_fiber_by_id(pid_t, struct process *);

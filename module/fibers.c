@@ -7,6 +7,7 @@
 
 
 
+
 DEFINE_HASHTABLE(processes, 10);
 
 
@@ -194,9 +195,10 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
 
         tp->selected_fiber->attached_thread = NULL;
 
-        /*//save previous FPU registers in the previous fiber
-           struct fpu *prev_fpu = &(current->thread.fpu);
-           memcpy(&(prev_fiber->fpu), prev_fpu, sizeof(struct fpu));*/
+        //save previous FPU registers in the previous fiber
+        /*struct fpu *prev_fpu = &(current->thread.fpu);
+        memcpy(&(prev_fiber->fpu), prev_fpu, sizeof(struct fpu));
+        fpu__save(&(prev_fiber->fpu));*/
 
         //restore next CPU context from the next fiber
         prev_regs->r15 = f->registers.r15;
@@ -218,6 +220,12 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         prev_regs->ip = f->registers.ip;
 
         tp->selected_fiber = f;
+
+        /*//restore next FPU registers of the next fiber
+           struct fpu *next_fpu = &(f->fpu);
+           memcpy(prev_fpu, next_fpu, sizeof(struct fpu));
+           struct fpu *next_fpu = &(f->fpu);
+           fpu__restore(next_fpu);*/
 
         preempt_enable();
         printk(KERN_DEBUG "[%s] Successfully switched to fiber %d\n", KBUILD_MODNAME, f->fiber_id);

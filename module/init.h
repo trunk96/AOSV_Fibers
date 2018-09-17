@@ -2,6 +2,7 @@
                 p = kmalloc(sizeof(struct process), GFP_KERNEL); \
                 p->process_id = current->tgid;            \
                 atomic64_set(&(p->last_fiber_id), 0);           \
+                atomic64_set(&(p->active_threads), 0);    \
                 hash_init(p->threads);                    \
                 hash_init(p->fibers);                     \
                 hash_add_rcu(ht, &(p->node), p->process_id);  \
@@ -12,7 +13,7 @@
                 t->thread_id = id;                       \
                 t->parent = parent_process;                      \
                 t->selected_fiber = NULL;                \
-                t->first_switch = 1;                     \
+                atomic64_inc(&(t->parent->active_threads));  \
                 hash_add_rcu(ht, &(t->node), id);         \
 } while(0)
 

@@ -24,7 +24,7 @@ void myfunction(void* parameters){
   long counter = 0;
   char * character = (char *) parameters;
   struct fiber_arguments fa2 = {
-    .fiber_id = 1,
+    .fiber_id = 2,
   };
   while(1){
     printf("Ora %c, %ld\n", *character, counter++);
@@ -45,6 +45,7 @@ void myfunction(void* parameters){
 
 void myfunction2 (void* parameters){
   long counter = 0;
+  double f_counter = 0.0;
   char * character = (char *) parameters;
   struct fiber_arguments fa2 = {
     .stack_size = 1,
@@ -55,7 +56,9 @@ void myfunction2 (void* parameters){
   pid_t addr = (unsigned long) ioctl(fd, ioctl_numbers[IOCTL_CREATE_FIBER], &fa2);
   fa2.fiber_id = addr;
   while(1){
-    printf("%c, %ld\n", *character, counter++);
+    counter++;
+    printf("%c, %f\n", *character, f_counter);
+    f_counter+=0.1;
     if (counter == 10){
       long ret = ioctl(fd, ioctl_numbers[IOCTL_SWITCH_TO_FIBER], &fa2);
       if (ret == -1){

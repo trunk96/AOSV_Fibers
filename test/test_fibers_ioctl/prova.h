@@ -10,6 +10,6 @@ struct fiber_arguments {
         void *start_function_arguments;
         pid_t fiber_id;
         unsigned long index;
-        void *value;
+        unsigned long buffer;
         unsigned long alloc_size;
 };

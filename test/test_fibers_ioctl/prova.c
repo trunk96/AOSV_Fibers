@@ -25,7 +25,19 @@ void myfunction(void* parameters){
   char * character = (char *) parameters;
   struct fiber_arguments fa2 = {
     .fiber_id = 1,
+    .alloc_size = 8,
   };
+  long index = ioctl(fd, ioctl_numbers[IOCTL_FLS_ALLOC], &fa2);
+  index = ioctl(fd, ioctl_numbers[IOCTL_FLS_ALLOC], &fa2);
+  fa2.index = index;
+  fa2.buffer = (unsigned long) malloc(8*sizeof(char));
+  *((unsigned long *)fa2.buffer) = 15;
+  long r = ioctl(fd, ioctl_numbers[IOCTL_FLS_SETVALUE], &fa2);
+  free((unsigned long*)fa2.buffer);
+  fa2.buffer = (unsigned long) malloc(sizeof(long));
+  r = ioctl(fd, ioctl_numbers[IOCTL_FLS_GETVALUE], &fa2);
+  printf("The number is %ld\n", *((unsigned long *)fa2.buffer));
+  index = ioctl(fd, ioctl_numbers[IOCTL_FLS_FREE], &fa2);
   while(1){
     printf("Ora %c, %ld\n", *character, counter++);
     if (counter == 10){

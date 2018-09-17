@@ -28,7 +28,7 @@ int clear_thread_struct(struct kprobe * k, struct pt_regs * r)
         //current is dying
         struct process *p = find_process_by_tgid(current->tgid);
         if (p == NULL) {
-                printk(KERN_DEBUG "[%s] we are in the do_exit for pid %d, not my process\n", KBUILD_MODNAME, current->tgid);
+                //printk(KERN_DEBUG "[%s] we are in the do_exit for pid %d, not my process\n", KBUILD_MODNAME, current->tgid);
                 return 0;
         }
 

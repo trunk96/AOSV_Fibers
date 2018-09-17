@@ -80,7 +80,7 @@ static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
                 if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
                         return -EFAULT;
                 }
-                return (long) do_FlsGetValue(fa.index, thread_id);
+                return (long) do_FlsGetValue(fa.index, fa.buffer, thread_id);
         }
         else if (cmd == IOCTL_FLS_SETVALUE) {
                 struct fiber_arguments fa;
@@ -90,7 +90,7 @@ static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
                 if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
                         return -EFAULT;
                 }
-                return do_FlsSetValue(fa.index, fa.value, thread_id);
+                return do_FlsSetValue(fa.index, fa.buffer, thread_id);
         }
         else {
                 return -EINVAL;

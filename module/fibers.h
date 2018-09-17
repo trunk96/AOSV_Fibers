@@ -24,14 +24,14 @@ struct fiber_arguments {
         void *start_function_arguments;
         pid_t fiber_id;
         unsigned long index;
-        void *value;
+        unsigned long buffer; //used both to get an element and to set an element
         unsigned long alloc_size;
 };
 
 
 struct fls_data {
         void *fls_data;
-        unsigned long size;
+        unsigned long size; //in bytes;
 };
 
 
@@ -48,7 +48,6 @@ struct fiber {
 
 
         //CPU context
-        //...
         struct pt_regs registers; //copy of the pt_regs struct that points into the kernel level stack
         struct fpu fpu; // to replace in task_struct->struct_thread->fpu upon context switch
         /*https://elixir.bootlin.com/linux/latest/source/arch/x86/include/asm/fpu/types.h/*/
@@ -58,7 +57,7 @@ struct fiber {
         unsigned long fiber_stack_size;
 
         struct fls_data fls[MAX_FLS_POINTERS];
-        long fls_bitmap[FLS_BITMAP_SIZE];
+        unsigned long fls_bitmap[FLS_BITMAP_SIZE];
 };
 
 
@@ -67,7 +66,7 @@ struct process {
         //that the module handles in each moment. Each struct process will
         //be linked to a list of struct fiber that belong to that process.
 
-        pid_t process_id; //key for the hashtable ???
+        pid_t process_id; //key for the hashtable processes
         struct hlist_node node;
         atomic_long_t last_fiber_id;
         atomic_long_t active_threads;
@@ -89,10 +88,10 @@ struct thread {
 void * do_ConvertThreadToFiber(pid_t);
 void * do_CreateFiber(void *, unsigned long, user_function_t, void *, pid_t);
 long do_SwitchToFiber(pid_t, pid_t);
-unsigned long do_FlsAlloc(unsigned long, pid_t);
+long do_FlsAlloc(unsigned long, pid_t);
 long do_FlsFree(unsigned long, pid_t);
-void * do_FlsGetValue(unsigned long, pid_t);
-long do_FlsSetValue(unsigned long, void *, pid_t);
+long do_FlsGetValue(unsigned long, unsigned long, pid_t);
+long do_FlsSetValue(unsigned long, unsigned long, pid_t);
 
 
 struct process * find_process_by_tgid(pid_t);

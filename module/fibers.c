@@ -3,9 +3,7 @@
 #include <linux/kernel.h>
 #include <linux/sched.h>
 #include <asm/switch_to.h>
-
-
-
+#include <linux/bitmap.h>
 
 
 DEFINE_HASHTABLE(processes, 10);
@@ -68,6 +66,20 @@ struct fiber * find_fiber_by_id(pid_t fiber_id, struct process *ep)
         if (found)
                 return fp;
         return NULL;
+}
+
+
+int check_bitmap(struct fiber *f, long index, long value)
+{
+
+        if (index >= MAX_FLS_POINTERS || index < 0)
+                return -1;
+        int counter = index / sizeof(long)*8;
+        int shift_counter = index % (sizeof(long)*8);
+        printk(KERN_DEBUG "[%s] Bitmap value is %lu", KBUILD_MODNAME, (unsigned long)f->fls_bitmap[counter]);
+        if (((f->fls_bitmap[counter] >> (sizeof(long)*8-shift_counter-1)) & 1) == (!value))
+                return -1;
+        return 1;
 }
 
 void * do_ConvertThreadToFiber(pid_t thread_id)
@@ -197,8 +209,8 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
 
         //save previous FPU registers in the previous fiber
         /*struct fpu *prev_fpu = &(current->thread.fpu);
-        memcpy(&(prev_fiber->fpu), prev_fpu, sizeof(struct fpu));
-        fpu__save(&(prev_fiber->fpu));*/
+           memcpy(&(prev_fiber->fpu), prev_fpu, sizeof(struct fpu));
+           fpu__save(&(prev_fiber->fpu));*/
 
         //restore next CPU context from the next fiber
         prev_regs->r15 = f->registers.r15;
@@ -233,22 +245,139 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         return 0;
 }
 
-unsigned long do_FlsAlloc(unsigned long alloc_size, pid_t thread_id)
+long do_FlsAlloc(unsigned long alloc_size, pid_t thread_id)
 {
-        return 3;
+        struct process *p = find_process_by_tgid(current->tgid);
+        if (p == NULL)
+                return -1;
+        struct thread *t = find_thread_by_pid(thread_id, p);
+        if (t == NULL || t->selected_fiber == NULL)
+                return -1;
+        struct fiber *f = t->selected_fiber;
+        int counter = 0;
+        while(counter < FLS_BITMAP_SIZE && (long)f->fls_bitmap[counter] == -1) {
+                counter++;
+        }
+        if (counter >= FLS_BITMAP_SIZE)
+                return -1;
+
+        //there is room for an allocation
+        /*int shift_counter = sizeof(long)*8-1; //63
+           while(((f->fls_bitmap[counter] >> shift_counter) & 1) == 1) {
+                shift_counter--;
+           }
+           long index = counter*sizeof(long)*8+(sizeof(long)*8-shift_counter)-1; //magic
+           long bitmask = 1 << (sizeof(long)*8-shift_counter-1);
+           f->fls_bitmap[counter] ^= bitmask;
+           f->fls[index].fls_data = kmalloc(alloc_size*sizeof(char), GFP_KERNEL);
+           f->fls[index].size = alloc_size;
+           printk(KERN_DEBUG "[%s] Index for PID %d is %ld\n", KBUILD_MODNAME, p->process_id, index);
+           return index;*/
+
+        unsigned long index = find_first_zero_bit(f->fls_bitmap, FLS_BITMAP_SIZE*sizeof(unsigned long)*64);
+        change_bit(index, f->fls_bitmap);
+        f->fls[index].fls_data = kmalloc(alloc_size*sizeof(char), GFP_USER);
+        f->fls[index].size = alloc_size;
+        printk(KERN_DEBUG "[%s] Index for PID %d is %ld\n", KBUILD_MODNAME, p->process_id, index);
+        return index;
 }
 
 long do_FlsFree(unsigned long index, pid_t thread_id)
 {
-        return 4;
+        struct process *p = find_process_by_tgid(current->tgid);
+        if (p == NULL)
+                return -1;
+        struct thread *t = find_thread_by_pid(thread_id, p);
+        if (t == NULL || t->selected_fiber == NULL)
+                return -1;
+        struct fiber *f = t->selected_fiber;
+
+        /*if(check_bitmap(f, index, 1) == -1)
+                return -1;
+
+           int counter = index / sizeof(long)*8;
+           int shift_counter = index % (sizeof(long)*8);
+           kfree(f->fls[index].fls_data);
+           f->fls[index].size = 0;
+           long bitmask = 1<<(sizeof(long)*8-shift_counter-1);
+           f->fls_bitmap[counter] ^= bitmask;*/
+        if (index >= MAX_FLS_POINTERS || index < 0)
+                return -1;
+
+        if(test_bit(index, f->fls_bitmap) == 0)
+                return -1;
+
+        kfree(f->fls[index].fls_data);
+        f->fls[index].size = 0;
+
+        change_bit(index, f->fls_bitmap);
+
+
+        printk(KERN_DEBUG "[%s] Freed index %ld for PID %d\n", KBUILD_MODNAME, index, p->process_id);
+        return 0;
 }
 
-void * do_FlsGetValue(unsigned long index, pid_t thread_id)
+long do_FlsGetValue(unsigned long index, unsigned long buffer, pid_t thread_id)
 {
-        return 5;
+        struct process *p = find_process_by_tgid(current->tgid);
+        if (p == NULL)
+                return -1;
+        struct thread *t = find_thread_by_pid(thread_id, p);
+        if (t == NULL || t->selected_fiber == NULL)
+                return -1;
+        struct fiber *f = t->selected_fiber;
+
+        /*if(check_bitmap(f, index, 1) == -1){
+           printk(KERN_DEBUG "[%s] Error inside check_bitmap\n", KBUILD_MODNAME);
+           return -1;
+           }*/
+
+        if (index >= MAX_FLS_POINTERS || index < 0)
+                return -1;
+
+        if(test_bit(index, f->fls_bitmap) == 0)
+                return -1;
+
+        if (!access_ok(VERIFY_WRITE, buffer, f->fls[index].size * sizeof(char))) {
+                return -EFAULT;
+        }
+        if (copy_to_user((void*)buffer, f->fls[index].fls_data, f->fls[index].size)) {
+                return -EFAULT;
+        }
+
+        printk(KERN_DEBUG "[%s] Returning a value to PID %d\n", KBUILD_MODNAME, p->process_id);
+
+        return f->fls[index].size;
 }
 
-long do_FlsSetValue(unsigned long index, void *value, pid_t thread_id)
+long do_FlsSetValue(unsigned long index, unsigned long value, pid_t thread_id)
 {
-        return 6;
+
+
+        struct process *p = find_process_by_tgid(current->tgid);
+        if (p == NULL)
+                return -1;
+        struct thread *t = find_thread_by_pid(thread_id, p);
+        if (t == NULL || t->selected_fiber == NULL)
+                return -1;
+        struct fiber *f = t->selected_fiber;
+        printk(KERN_DEBUG "[%s] Index given from PID %d is %ld\n", KBUILD_MODNAME, p->process_id, index);
+
+        /*if(check_bitmap(f, index, 1) == -1)
+                return -1;*/
+        if (index >= MAX_FLS_POINTERS || index < 0)
+                return -1;
+
+        if(test_bit(index, f->fls_bitmap) == 0)
+                return -1;
+
+        if (!access_ok(VERIFY_READ, value, f->fls[index].size * sizeof(char))) {
+                return -EFAULT;
+        }
+        if (copy_from_user(f->fls[index].fls_data, (void*)value, f->fls[index].size*sizeof(char))) {
+                return -EFAULT;
+        }
+
+        printk(KERN_DEBUG "[%s] Received value from PID %d\n", KBUILD_MODNAME, p->process_id);
+        return 0;
 }

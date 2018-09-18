@@ -32,6 +32,10 @@
                 f->registers.bp = f->registers.sp; \
                 f->fiber_id = atomic64_inc_return(&(parent->last_fiber_id));  \
                 hash_add_rcu(ht, &(f->node), f->fiber_id);                             \
+                f->start_address = (void*) task_pt_regs(current)->ip;         \
+                f->creator_thread = current->pid;                             \
+                f->activation_counter = 0;                                    \
+                atomic64_set(&(f->failed_activation_counter), 0);             \
 } while(0)
 
 //f->fiber_stack = (void *) __get_free_pages(GFP_USER, f->fiber_stack_size);

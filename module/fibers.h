@@ -12,7 +12,12 @@
 #define DEFAULT_STACK_SIZE 1
 
 
-typedef void(*user_function_t)(void *param);
+typedef void (*user_function_t)(void *param);
+
+struct proc_info {
+        pid_t fiber_id;
+        pid_t process_id;
+};
 
 
 struct fiber_arguments {
@@ -58,6 +63,14 @@ struct fiber {
 
         struct fls_data fls[MAX_FLS_POINTERS];
         unsigned long fls_bitmap[FLS_BITMAP_SIZE];
+
+        //some statistics...
+        void* start_address;
+        pid_t creator_thread;
+        unsigned long activation_counter;
+        atomic_long_t failed_activation_counter;
+        struct proc_dir_entry *fiber_proc_entry;
+
 };
 
 
@@ -70,9 +83,9 @@ struct process {
         struct hlist_node node;
         atomic_long_t last_fiber_id;
         atomic_long_t active_threads;
+        struct proc_dir_entry *proc_entry;
         DECLARE_HASHTABLE(threads, 10);
         DECLARE_HASHTABLE(fibers, 10);
-
 };
 
 struct thread {
@@ -97,3 +110,7 @@ long do_FlsSetValue(unsigned long, unsigned long, pid_t);
 struct process * find_process_by_tgid(pid_t);
 struct thread * find_thread_by_pid(pid_t, struct process *);
 struct fiber * find_fiber_by_id(pid_t, struct process *);
+
+
+extern int proc_fiber_open(struct inode *, struct file *);
+extern ssize_t proc_fiber_read(struct file *, char __user *, size_t, loff_t *);

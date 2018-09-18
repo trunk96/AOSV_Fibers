@@ -2,11 +2,12 @@
 #include "init.h"
 #include <linux/kernel.h>
 #include <linux/sched.h>
-#include <asm/switch_to.h>
 #include <linux/bitmap.h>
+#include <linux/proc_fs.h>
 
 
 DEFINE_HASHTABLE(processes, 10);
+//is the same of struct hlist_head processes[2<<10];
 
 
 struct process * find_process_by_tgid(pid_t tgid)
@@ -88,6 +89,29 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
 
                 fp->attached_thread = gp;
                 gp->selected_fiber = fp;
+
+                //create the proc directory for the process
+                char name[256] = "";
+                /*snprintf(name, 256, "%d", current->tgid);
+                struct proc_dir_entry *proc_parent = proc_mkdir(name, NULL);
+                ep->proc_entry = proc_mkdir("fibers", proc_parent);*/
+
+                snprintf(name, 256, "%d/fibers", current->tgid);
+                printk(KERN_DEBUG "[%s] String name is \"%s\"\n", KBUILD_MODNAME, name);
+                ep->proc_entry = proc_mkdir(name, NULL);
+                struct file_operations fops = {
+                        .open = proc_fiber_open,
+                        .read = proc_fiber_read,
+                };
+                snprintf(name, 256, "%d", fp->fiber_id);
+                struct proc_info pinfo = {
+                        .fiber_id = fp->fiber_id,
+                        .process_id = ep->process_id,
+                };
+                void * data = NULL;
+                memcpy(&data, &pinfo, sizeof(void*));
+                fp->fiber_proc_entry = proc_create_data(name, 0666, ep->proc_entry, &fops, data);
+
                 printk(KERN_DEBUG "[%s] created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
                 return fp->fiber_id;
         }
@@ -130,6 +154,26 @@ pid_t do_CreateFiber(void *stack_pointer, unsigned long stack_size, user_functio
         init_fiber(fp, ep, ep->fibers, stack_size, stack_pointer);
         fp->registers.ip = (long) fiber_function;
         fp->registers.di = (long) parameters; //passing the first parameter into %rdi (System V AMD64 ABI)
+
+        //this line to override the behaviour of init_fiber
+        fp->start_address = (void*) fiber_function;
+
+        struct file_operations fops = {
+                .open = proc_fiber_open,
+                .read = proc_fiber_read,
+        };
+
+        char name[256] = "";
+        snprintf(name, 256, "%d", fp->fiber_id);
+        struct proc_info pinfo = {
+                .fiber_id = fp->fiber_id,
+                .process_id = ep->process_id,
+        };
+        void * data = NULL;
+        memcpy(&data, &pinfo, sizeof(void*));
+        fp->fiber_proc_entry = proc_create_data(name, 0666, ep->proc_entry, &fops, data);
+
+
         printk(KERN_DEBUG "[%s] created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
         return fp->fiber_id;
 }
@@ -158,9 +202,12 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
 
         spin_lock_irqsave(&(f->fiber_lock), flags);
         //critical section
-        if (f->attached_thread != NULL)
+        if (f->attached_thread != NULL){
+                atomic64_inc(&(f->failed_activation_counter));
                 return -1;
+        }
         f->attached_thread = tp;
+        f->activation_counter++;
         //end of critical section
         spin_unlock_irqrestore(&(f->fiber_lock), flags);
         //printk(KERN_DEBUG "%s exited from critical section\n", KBUILD_MODNAME);

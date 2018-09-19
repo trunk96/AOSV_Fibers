@@ -20,6 +20,8 @@ void fiberlib_init()
                 i++;
         }
         fiberlib_initialized = 1;
+        double foo = 0.0;
+        foo += 0.05;
         return;
 }
 

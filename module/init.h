@@ -36,6 +36,10 @@
                 f->creator_thread = current->pid;                             \
                 f->activation_counter = 0;                                    \
                 atomic64_set(&(f->failed_activation_counter), 0);             \
+                f->fiber_info.fiber_id = f->fiber_id;                         \
+                f->fiber_info.process_id = f->parent_process->process_id;             \
+                f->fpu.initialized = 1; \
+                copy_fxregs_to_kernel(&(f->fpu));                             \
 } while(0)
 
 //f->fiber_stack = (void *) __get_free_pages(GFP_USER, f->fiber_stack_size);

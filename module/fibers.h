@@ -15,8 +15,8 @@
 typedef void (*user_function_t)(void *param);
 
 struct proc_info {
-        pid_t fiber_id;
-        pid_t process_id;
+        int fiber_id;
+        int process_id;
 };
 
 
@@ -70,6 +70,7 @@ struct fiber {
         unsigned long activation_counter;
         atomic_long_t failed_activation_counter;
         struct proc_dir_entry *fiber_proc_entry;
+        struct proc_info fiber_info;
 
 };
 
@@ -112,5 +113,5 @@ struct thread * find_thread_by_pid(pid_t, struct process *);
 struct fiber * find_fiber_by_id(pid_t, struct process *);
 
 
-extern int proc_fiber_open(struct inode *, struct file *);
+//extern int proc_fiber_open(struct inode *, struct file *);
 extern ssize_t proc_fiber_read(struct file *, char __user *, size_t, loff_t *);

@@ -7,8 +7,12 @@
 
 
 DEFINE_HASHTABLE(processes, 10);
-//is the same of struct hlist_head processes[2<<10];
+//is the same of struct hlist_head processes[2<<10] = {...};
 
+
+struct file_operations fops = {
+        read: proc_fiber_read
+};
 
 struct process * find_process_by_tgid(pid_t tgid)
 {
@@ -90,27 +94,20 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
                 fp->attached_thread = gp;
                 gp->selected_fiber = fp;
 
+                //this line to override the behaviour of init_fiber
+                fp->activation_counter++;
+
                 //create the proc directory for the process
                 char name[256] = "";
                 /*snprintf(name, 256, "%d", current->tgid);
                 struct proc_dir_entry *proc_parent = proc_mkdir(name, NULL);
                 ep->proc_entry = proc_mkdir("fibers", proc_parent);*/
 
-                snprintf(name, 256, "%d/fibers", current->tgid);
-                printk(KERN_DEBUG "[%s] String name is \"%s\"\n", KBUILD_MODNAME, name);
-                ep->proc_entry = proc_mkdir(name, NULL);
-                struct file_operations fops = {
-                        .open = proc_fiber_open,
-                        .read = proc_fiber_read,
-                };
-                snprintf(name, 256, "%d", fp->fiber_id);
-                struct proc_info pinfo = {
-                        .fiber_id = fp->fiber_id,
-                        .process_id = ep->process_id,
-                };
-                void * data = NULL;
-                memcpy(&data, &pinfo, sizeof(void*));
-                fp->fiber_proc_entry = proc_create_data(name, 0666, ep->proc_entry, &fops, data);
+
+                snprintf(name, 256, "%d_%d",ep->process_id, fp->fiber_id);
+                //fp->fiber_proc_entry = proc_create_data(name, 0, NULL, &fops, &(fp->fiber_info));
+                fp->fiber_proc_entry = proc_create_data(name, 0, NULL, &fops, &(fp->fiber_info));
+                //fp->fiber_proc_entry = proc_create("name_1", 0, NULL, &fops);
 
                 printk(KERN_DEBUG "[%s] created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
                 return fp->fiber_id;
@@ -128,6 +125,9 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
         //these two lines to override init_fiber behaviour in case of a yet existing line of execution
         fp->registers.sp = task_pt_regs(current)->sp;
         fp->registers.bp = task_pt_regs(current)->bp;
+
+        //this line to override the behaviour of init_fiber
+        fp->activation_counter++;
 
         fp->attached_thread = gp;
         gp->selected_fiber = fp;
@@ -158,7 +158,7 @@ pid_t do_CreateFiber(void *stack_pointer, unsigned long stack_size, user_functio
         //this line to override the behaviour of init_fiber
         fp->start_address = (void*) fiber_function;
 
-        struct file_operations fops = {
+        /*struct file_operations fops = {
                 .open = proc_fiber_open,
                 .read = proc_fiber_read,
         };
@@ -171,7 +171,11 @@ pid_t do_CreateFiber(void *stack_pointer, unsigned long stack_size, user_functio
         };
         void * data = NULL;
         memcpy(&data, &pinfo, sizeof(void*));
-        fp->fiber_proc_entry = proc_create_data(name, 0666, ep->proc_entry, &fops, data);
+        fp->fiber_proc_entry = proc_create_data(name, 0666, ep->proc_entry, &fops, data);*/
+
+        char name[256] = "";
+        snprintf(name, 256, "%d_%d",ep->process_id, fp->fiber_id);
+        fp->fiber_proc_entry = proc_create_data(name, 0, NULL, &fops, &(fp->fiber_info));
 
 
         printk(KERN_DEBUG "[%s] created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
@@ -217,6 +221,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
 
         //kernel_fpu_begin();
         preempt_disable();
+
         struct pt_regs *prev_regs = task_pt_regs(current);
         struct fiber * prev_fiber = tp->selected_fiber;
 
@@ -243,8 +248,14 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
 
         //save previous FPU registers in the previous fiber
         /*struct fpu *prev_fpu = &(current->thread.fpu);
-           memcpy(&(prev_fiber->fpu), prev_fpu, sizeof(struct fpu));
-           fpu__save(&(prev_fiber->fpu));*/
+           memcpy(&(prev_fiber->fpu), prev_fpu, sizeof(struct fpu));*/
+        //fpu__save(&(prev_fiber->fpu));
+
+        /*if (!copy_fpregs_to_fpstate(&(prev_fiber->fpu))) {
+                copy_kernel_to_fpregs(&(prev_fiber->fpu.state));
+        }*/
+        struct fpu *prev_fpu = &(prev_fiber->fpu);
+        copy_fxregs_to_kernel(prev_fpu);
 
         //restore next CPU context from the next fiber
         prev_regs->r15 = f->registers.r15;
@@ -270,8 +281,16 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         /*//restore next FPU registers of the next fiber
            struct fpu *next_fpu = &(f->fpu);
            memcpy(prev_fpu, next_fpu, sizeof(struct fpu));
-           struct fpu *next_fpu = &(f->fpu);
-           fpu__restore(next_fpu);*/
+           struct fpu *next_fpu = &(f->fpu);*/
+        /*struct fpu *next_fpu = &(f->fpu);
+        fpu__restore(next_fpu);*/
+
+        struct fpu *next_fpu = &(f->fpu);
+        struct fxregs_state * next_fx_regs = &(next_fpu->state.fxsave);
+        copy_kernel_to_fxregs(next_fx_regs);
+
+        /*fpregs_activate(next_fpu);
+	      copy_kernel_to_fpregs(&(next_fpu->state));*/
 
         preempt_enable();
         printk(KERN_DEBUG "[%s] Successfully switched to fiber %d\n", KBUILD_MODNAME, f->fiber_id);

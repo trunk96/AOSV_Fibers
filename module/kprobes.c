@@ -1,4 +1,5 @@
 #include <linux/kprobes.h>
+#include <linux/proc_fs.h>
 #include "fibers.h"
 
 extern struct hlist_head processes;
@@ -79,6 +80,7 @@ int clear_thread_struct(struct kprobe * k, struct pt_regs * r)
                         if (f == NULL)
                                 break;
                         //here we have also to kfree the fls
+                        proc_remove(f->fiber_proc_entry);
                         kfree(f);
                 }
                 hash_del_rcu(&(p->node));

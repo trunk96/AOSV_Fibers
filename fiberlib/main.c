@@ -33,12 +33,27 @@ void function (void* parameters)
                       //printf("ciao\n");
                       x+=0.5;
                 }
-                if (x < 0){
+                if (x > 1){
                   break;
                 }
                 counter++;
         }
-
+        SwitchToFiber(1);
+        x += 0.6;
+        if (x > 1.5){
+          printf("bellaaaaaaaaaaa\n");
+        }
+        /*while(1) {
+                if (counter % 10000000 == 0){
+                      //printf("ciao, %f\n", x);
+                      //printf("ciao\n");
+                      x+=0.6;
+                }
+                if (x > 1.5){
+                  break;
+                }
+                counter++;
+        }*/
 
         exit(0);
 }
@@ -52,6 +67,16 @@ int main()
         SwitchToFiber(new_fiber);
         long counter = 0;
         double x = 0.0;
+        while(1) {
+                if (counter % 10000000 == 0){
+                      printf("bella, %f\n", x);
+                      //printf("ciao\n");
+                      x+=0.5;
+                      break;
+                }
+                counter++;
+        }
+        SwitchToFiber(new_fiber);
         while(1) {
                 if (counter % 10000000 == 0){
                       printf("bella, %f\n", x);

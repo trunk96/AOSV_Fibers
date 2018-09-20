@@ -3,6 +3,23 @@
 #include <linux/sched.h>
 #include "fibers.h"
 
+
+#define NOD(NAME, MODE, IOP, FOP, OP) {     \
+                .name = (NAME),         \
+                .len  = sizeof(NAME) - 1,     \
+                .mode = MODE,         \
+                .iop  = IOP,          \
+                .fop  = FOP,          \
+                .op   = OP,         \
+}
+
+#define DIR(NAME, MODE, iops, fops) \
+        NOD(NAME, (S_IFDIR|(MODE)), &iops, &fops, {} )
+#define REG(NAME, MODE, fops)       \
+        NOD(NAME, (S_IFREG|(MODE)), NULL, &fops, {})
+
+
+
 extern struct hlist_head processes;
 extern struct process * find_process_by_tgid(pid_t);
 extern struct fiber * find_fiber_by_id(pid_t, struct process *);
@@ -12,8 +29,11 @@ extern void do_exit(long);
 int clear_thread_struct(struct kprobe *, struct pt_regs *);
 int fiber_timer(struct kretprobe_instance *, struct pt_regs *);
 
+
 struct kprobe do_exit_kp;
 struct kretprobe finish_task_switch_krp;
+struct kretprobe proc_fiber_dir_krp[2];
+
 
 
 int register_kprobe_do_exit(void)
@@ -41,6 +61,44 @@ int register_kretprobe_finish_task_switch(void)
 int unregister_kretprobe_finish_task_switch(void)
 {
         unregister_kretprobe(&finish_task_switch_krp);
+        return 0;
+}
+
+int register_kretprobe_proc_fiber_dir(void)
+{
+        proc_fiber_dir_krp[0].entry_handler = proc_insert_dir;
+        proc_fiber_dir_krp[0].handler = dummy_fnct;
+        proc_fiber_dir_krp[0].kp.symbol_name = "proc_pident_readdir";
+        register_kretprobe(&fproc_fiber_dir_krp[0]);
+        proc_fiber_dir_krp[1].entry_handler = proc_insert_dir;
+        proc_fiber_dir_krp[1].handler = dummy_fnct;
+        proc_fiber_dir_krp[1].kp.symbol_name = "proc_pident_lookup";
+        register_kretprobe(&proc_fiber_dir_krp[1]);
+        return 0;
+}
+
+int unregister_kretprobe_proc_fiber_dir(void)
+{
+        unregister_kretprobe(&proc_fiber_dir_krp[0]);
+        unregister_kretprobe(&proc_fiber_dir_krp[1]);
+        return 0;
+}
+
+
+int dummy_fnct(struct kretprobe_instance *ri, struct pt_regs *regs)
+{
+        return 0;
+}
+
+
+struct pid_entry tgid_base_stuff_modified[ARRAY_SIZE(tgid_base_stuff)+1];
+
+int proc_insert_dir(struct kretprobe_instance *ri, struct pt_regs *regs)
+{
+        memcpy(tgid_base_stuff_modified, tgid_base_stuff, ARRAY_SIZE(tgid_base_stuff)*sizeof(pid_entry));
+        tgid_base_stuff_modified[ARRAY_SIZE(tgid_base_stuff)] = DIR("fibers", S_IRUGO|S_IXUGO, proc_task_inode_operations, proc_task_operations); //TODO
+        regs->rdx = tgid_base_stuff_modified;
+        regs->rcx += 1;
         return 0;
 }
 
@@ -135,7 +193,8 @@ int fiber_timer(struct kretprobe_instance *ri, struct pt_regs *regs)
         if (prev_f == NULL)
                 goto end;
 
-        prev_f->total_time += (prev->utime - prev_f->prev_time);
+        //prev_f->total_time += (prev->utime - prev_f->prev_time);
+        prev_f->total_time += prev->utime;
 
 end:
         next_p= find_process_by_tgid(current->tgid);

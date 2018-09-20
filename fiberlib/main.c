@@ -43,7 +43,7 @@ void function (void* parameters)
         if (x > 1.5){
           printf("bellaaaaaaaaaaa\n");
         }
-        for (counter = 0; counter < 1000000; counter ++){
+        for (counter = 0; counter < 10000000; counter ++){
           printf("abcdefg\n");
         }
         /*while(1) {
@@ -90,7 +90,7 @@ int main()
                 counter++;
         }
         SwitchToFiber(new_fiber);
-        for (counter = 0; counter < 1000000; counter ++){
+        for (counter = 0; counter < 10000000; counter ++){
           printf("hilmnopq\n");
         }
         SwitchToFiber(new_fiber);

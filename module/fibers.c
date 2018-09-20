@@ -222,7 +222,8 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
 
 
         struct fiber * prev_fiber = tp->selected_fiber;
-        prev_fiber->total_time += (current->utime-prev_fiber->prev_time);
+        //prev_fiber->total_time += (current->utime-prev_fiber->prev_time);
+        prev_fiber->total_time += current->utime;
 
         f->prev_time = current->utime;
 

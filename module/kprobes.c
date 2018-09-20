@@ -1,6 +1,9 @@
 #include <linux/kprobes.h>
 #include <linux/proc_fs.h>
 #include <linux/sched.h>
+
+#include <linux/stat.h>
+#include <linux/fs.h>
 #include "fibers.h"
 
 
@@ -17,7 +20,6 @@
         NOD(NAME, (S_IFDIR|(MODE)), &iops, &fops, {} )
 #define REG(NAME, MODE, fops)       \
         NOD(NAME, (S_IFREG|(MODE)), NULL, &fops, {})
-
 
 
 extern struct hlist_head processes;
@@ -92,11 +94,23 @@ int dummy_fnct(struct kretprobe_instance *ri, struct pt_regs *regs)
 
 
 struct pid_entry tgid_base_stuff_modified[ARRAY_SIZE(tgid_base_stuff)+1];
+struct inode_operations proc_fiber_inode_operations = {
+	.lookup		= proc_task_lookup,
+	.getattr	= proc_task_getattr,
+	.setattr	= proc_setattr,
+	.permission	= proc_pid_permission,
+};
+
+struct file_operations proc_fiber_operations = {
+	.read		= generic_read_dir,
+	.iterate_shared	= proc_task_readdir,
+	.llseek		= generic_file_llseek,
+};
 
 int proc_insert_dir(struct kretprobe_instance *ri, struct pt_regs *regs)
 {
         memcpy(tgid_base_stuff_modified, tgid_base_stuff, ARRAY_SIZE(tgid_base_stuff)*sizeof(pid_entry));
-        tgid_base_stuff_modified[ARRAY_SIZE(tgid_base_stuff)] = DIR("fibers", S_IRUGO|S_IXUGO, proc_task_inode_operations, proc_task_operations); //TODO
+        tgid_base_stuff_modified[ARRAY_SIZE(tgid_base_stuff)] = DIR("fibers", S_IRUGO|S_IXUGO, proc_fiber_inode_operations, proc_fiber_operations); //TODO
         regs->rdx = tgid_base_stuff_modified;
         regs->rcx += 1;
         return 0;

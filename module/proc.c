@@ -32,8 +32,8 @@ ssize_t proc_fiber_read(struct file *filp, char __user *buf, size_t len, loff_t 
         if (fp == NULL)
                 return 0;
 
-        snprintf(string_abc, 4096, "Currently Ongoing: %s\nStart Address: %lu\nCreator thread: %d\n# of current activations: %lu\n# of failed activations: %lu\n",
-                  (fp->attached_thread == NULL)? "no": "yes", (unsigned long)fp->start_address, fp->creator_thread, fp->activation_counter, atomic64_read(&(fp->failed_activation_counter)));
+        snprintf(string_abc, 4096, "Currently Ongoing: %s\nStart Address: %lu\nCreator thread: %d\n# of current activations: %lu\n# of failed activations: %lu\nTotal execution time in user space: %lu\n",
+                  (fp->attached_thread == NULL)? "no": "yes", (unsigned long)fp->start_address, fp->creator_thread, fp->activation_counter, atomic64_read(&(fp->failed_activation_counter)), fp->total_time);
 
         //printk(KERN_DEBUG "%s: %s\n", KBUILD_MODNAME, string_abc);
 

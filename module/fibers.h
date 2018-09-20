@@ -69,6 +69,8 @@ struct fiber {
         pid_t creator_thread;
         unsigned long activation_counter;
         atomic_long_t failed_activation_counter;
+        unsigned long prev_time;
+        unsigned long total_time;
         struct proc_dir_entry *fiber_proc_entry;
         struct proc_info fiber_info;
 

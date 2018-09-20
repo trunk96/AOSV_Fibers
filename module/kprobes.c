@@ -1,26 +1,46 @@
 #include <linux/kprobes.h>
 #include <linux/proc_fs.h>
+#include <linux/sched.h>
 #include "fibers.h"
 
 extern struct hlist_head processes;
 extern struct process * find_process_by_tgid(pid_t);
+extern struct fiber * find_fiber_by_id(pid_t, struct process *);
 extern struct thread * find_thread_by_pid(pid_t, struct process *);
 extern void do_exit(long);
 
 int clear_thread_struct(struct kprobe *, struct pt_regs *);
+int fiber_timer(struct kretprobe_instance *, struct pt_regs *);
 
 struct kprobe do_exit_kp;
+struct kretprobe finish_task_switch_krp;
 
 
-int register_kprobe_do_exit(void){
+int register_kprobe_do_exit(void)
+{
         do_exit_kp.pre_handler = clear_thread_struct;
         do_exit_kp.addr = (kprobe_opcode_t *)&(do_exit);
         register_kprobe(&do_exit_kp);
         return 0;
 }
 
-int unregister_kprobe_do_exit(void){
+int unregister_kprobe_do_exit(void)
+{
         unregister_kprobe(&do_exit_kp);
+        return 0;
+}
+
+int register_kretprobe_finish_task_switch(void)
+{
+        finish_task_switch_krp.handler = fiber_timer;
+        finish_task_switch_krp.kp.symbol_name = "finish_task_switch";
+        register_kretprobe(&finish_task_switch_krp);
+        return 0;
+}
+
+int unregister_kretprobe_finish_task_switch(void)
+{
+        unregister_kretprobe(&finish_task_switch_krp);
         return 0;
 }
 
@@ -80,6 +100,7 @@ int clear_thread_struct(struct kprobe * k, struct pt_regs * r)
                         if (f == NULL)
                                 break;
                         //here we have also to kfree the fls
+                        printk(KERN_DEBUG "%s: Time value for fiber %d is %lu\n", KBUILD_MODNAME, f->fiber_id, f->total_time);
                         proc_remove(f->fiber_proc_entry);
                         kfree(f);
                 }
@@ -87,5 +108,53 @@ int clear_thread_struct(struct kprobe * k, struct pt_regs * r)
                 kfree(p);
                 printk(KERN_DEBUG "[%s] PID %d cleared!\n", KBUILD_MODNAME, current->tgid);
         }
+        return 0;
+}
+
+
+struct task_struct *prev = NULL;
+
+
+int fiber_timer(struct kretprobe_instance *ri, struct pt_regs *regs)
+{
+        struct process *next_p;
+        struct thread *next_th;
+        struct fiber *next_f;
+        if (prev == NULL)
+                goto end;
+
+        struct process *prev_p = find_process_by_tgid(prev->tgid);
+        if (prev_p == NULL)
+                goto end;
+
+        struct thread *prev_th = find_thread_by_pid(prev->pid, prev_p);
+        if (prev_th == NULL)
+                goto end;
+
+        struct fiber *prev_f = prev_th->selected_fiber;
+        if (prev_f == NULL)
+                goto end;
+
+        prev_f->total_time += (prev->utime - prev_f->prev_time);
+
+end:
+        next_p= find_process_by_tgid(current->tgid);
+        if (next_p == NULL)
+                goto end_not_our_fiber;
+
+        next_th = find_thread_by_pid(current->pid, next_p);
+        if (next_th == NULL)
+                goto end_not_our_fiber;
+
+        next_f = next_th->selected_fiber;
+        if (next_f == NULL)
+                goto end_not_our_fiber;
+
+        next_f->prev_time = current->utime;
+
+
+
+end_not_our_fiber:
+        prev = current;
         return 0;
 }

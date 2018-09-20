@@ -11,8 +11,8 @@ void function (void* parameters)
         FlsSetValue(&a, index);
         char b;
         FlsGetValue(&b, index);
-        printf("Parameters is %c and value is %c\n", *((char*)parameters), b);
-        FlsFree(index);
+        /*printf("Parameters is %c and value is %c\n", *((char*)parameters), b);
+        FlsFree(index);*/
         long counter = 0;
         //double x = 0.0;
         while(1) {
@@ -26,7 +26,7 @@ void function (void* parameters)
         }
         SwitchToFiber(1);
         counter = 0;
-        double x = 0.0;
+        float x __attribute__ ((aligned (16))) = 0.0;
         while(1) {
                 if (counter % 10000000 == 0){
                       //printf("ciao, %f\n", x);
@@ -43,6 +43,9 @@ void function (void* parameters)
         if (x > 1.5){
           printf("bellaaaaaaaaaaa\n");
         }
+        for (counter = 0; counter < 1000000; counter ++){
+          printf("abcdefg\n");
+        }
         /*while(1) {
                 if (counter % 10000000 == 0){
                       //printf("ciao, %f\n", x);
@@ -54,7 +57,7 @@ void function (void* parameters)
                 }
                 counter++;
         }*/
-
+        SwitchToFiber(1);
         exit(0);
 }
 
@@ -85,6 +88,10 @@ int main()
                       break;
                 }
                 counter++;
+        }
+        SwitchToFiber(new_fiber);
+        for (counter = 0; counter < 1000000; counter ++){
+          printf("hilmnopq\n");
         }
         SwitchToFiber(new_fiber);
         exit(0);

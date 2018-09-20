@@ -26,16 +26,20 @@ void fiberlib_init()
 }
 
 
-pid_t ConvertThreadToFiber()
+void* ConvertThreadToFiber()
 {
+		pid_t pid;
         if (!fiberlib_initialized)
                 fiberlib_init();
-        return (pid_t) ioctl(fd, ioctl_numbers[IOCTL_CONVERT_THREAD_TO_FIBER], 0);
+        pid = ioctl(fd, ioctl_numbers[IOCTL_CONVERT_THREAD_TO_FIBER], 0);
+        return (void*) pid;
 }
 
 
-pid_t CreateFiber(user_function_t function_pointer, unsigned long stack_size, void *parameters)
+void * CreateFiber(void (*entry_point)(void *), unsigned long stack_size, void *parameters)
 {
+		user_function_t *function_pointer = (user_function_t *)entry_point;
+		pid_t pid;
         if (!fiberlib_initialized)
                 fiberlib_init();
         //stack_size is espressed in pages but the kernel wants an order
@@ -50,24 +54,29 @@ pid_t CreateFiber(user_function_t function_pointer, unsigned long stack_size, vo
         //f.stack_pointer = malloc((4096<<stack_size_kernel)*sizeof(char));
         posix_memalign(&(f.stack_pointer), 16, (4096<<stack_size_kernel)*sizeof(char));
         bzero(f.stack_pointer, (4096<<stack_size_kernel)*sizeof(char));
-        printf("Stack address is %p\n", f.stack_pointer);
-        return (pid_t) ioctl(fd, ioctl_numbers[IOCTL_CREATE_FIBER], &f);
+        //printf("Stack address is %p\n", f.stack_pointer);
+        pid = ioctl(fd, ioctl_numbers[IOCTL_CREATE_FIBER], &f);
+        return (void *) pid;
 }
 
 
-long SwitchToFiber(pid_t fiber_id)
+void SwitchToFiber(void * fiber_id)
 {
+		pid_t pid;
+		memcpy(&pid, &fiber_id, sizeof(pid_t));
         if (!fiberlib_initialized)
                 fiberlib_init();
         struct fiber_arguments f = {
                 .fiber_id = fiber_id,
         };
-        return ioctl(fd, ioctl_numbers[IOCTL_SWITCH_TO_FIBER], &f);
+        ioctl(fd, ioctl_numbers[IOCTL_SWITCH_TO_FIBER], &f);
+        return;
 }
 
 
-long FlsAlloc(unsigned long size)
+long FlsAlloc()
 {
+		unsigned long size = sizeof(long long);
         if (!fiberlib_initialized)
                 fiberlib_init();
         struct fiber_arguments f = {
@@ -88,24 +97,28 @@ long FlsFree(unsigned long index)
 }
 
 
-long FlsSetValue(void *buffer, unsigned long index)
+void FlsSetValue(long long value, unsigned long index)
 {
+		long long * buffer = &value;
         if (!fiberlib_initialized)
                 fiberlib_init();
         struct fiber_arguments f = {
                 .index = index,
                 .buffer = (unsigned long) buffer,
         };
-        return ioctl(fd, ioctl_numbers[IOCTL_FLS_SETVALUE], &f);
+        ioctl(fd, ioctl_numbers[IOCTL_FLS_SETVALUE], &f);
+        return;
 }
 
-long FlsGetValue(void *buffer, unsigned long index)
+long long FlsGetValue(unsigned long index)
 {
+		long long * buffer = malloc(sizeof(long long));
         if (!fiberlib_initialized)
                 fiberlib_init();
         struct fiber_arguments f = {
                 .index = index,
                 .buffer = (unsigned long) buffer,
         };
-        return ioctl(fd, ioctl_numbers[IOCTL_FLS_GETVALUE], &f);
+        ioctl(fd, ioctl_numbers[IOCTL_FLS_GETVALUE], &f);
+        return *buffer;
 }

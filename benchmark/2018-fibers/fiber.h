@@ -1,6 +1,6 @@
 #pragma once
 
-#define USERSPACE
+
 
 #ifdef USERSPACE
 
@@ -21,12 +21,14 @@
 // Here you should point to the invocation of your code!
 // See README.md for further details.
 
-#define ConvertThreadToFiber() {}
-#define CreateFiber(dwStackSize, lpStartAddress, lpParameter) {}
-#define SwitchToFiber(lpFiber) {}
-#define FlsAlloc(lpCallback) {}
-#define FlsFree(dwFlsIndex) {}
-#define FlsGetValue(dwFlsIndex) {}
-#define FlsSetValue(dwFlsIndex, lpFlsData) {}
+#include "src/fiberlib_user.h"
+
+#define ConvertThreadToFiber() ConvertThreadToFiber()
+#define CreateFiber(dwStackSize, lpStartAddress, lpParameter) CreateFiber(lpStartAddress, lpParameter, dwStackSize)
+#define SwitchToFiber(lpFiber) SwitchToFiber(lpFiber)
+#define FlsAlloc(lpCallback) FlsAlloc()
+#define FlsFree(dwFlsIndex) FlsFree(dwFlsIndex)
+#define FlsGetValue(dwFlsIndex) FlsGetValue(dwFlsIndex)
+#define FlsSetValue(dwFlsIndex, lpFlsData) FlsSetValue(lpFlsData, dwFlsIndex)
 
 #endif /* USERSPACE */

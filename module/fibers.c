@@ -97,6 +97,8 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
                 //this line to override the behaviour of init_fiber
                 fp->activation_counter++;
 
+                fp->prev_time = current->utime;
+
                 //create the proc directory for the process
                 char name[256] = "";
                 /*snprintf(name, 256, "%d", current->tgid);
@@ -128,6 +130,8 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
 
         //this line to override the behaviour of init_fiber
         fp->activation_counter++;
+
+        fp->prev_time = current->utime;
 
         fp->attached_thread = gp;
         gp->selected_fiber = fp;
@@ -217,13 +221,16 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         //printk(KERN_DEBUG "%s exited from critical section\n", KBUILD_MODNAME);
 
 
-        /* note - this code may work, if not ask to Alessandro Pellegrini*/
+        struct fiber * prev_fiber = tp->selected_fiber;
+        prev_fiber->total_time += (current->utime-prev_fiber->prev_time);
+
+        f->prev_time = current->utime;
 
         //kernel_fpu_begin();
         preempt_disable();
 
         struct pt_regs *prev_regs = task_pt_regs(current);
-        struct fiber * prev_fiber = tp->selected_fiber;
+
 
         //save previous CPU registers in the previous fiber
         prev_fiber->registers.r15 = prev_regs->r15;

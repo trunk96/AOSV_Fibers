@@ -28,8 +28,12 @@ extern struct fiber * find_fiber_by_id(pid_t, struct process *);
 extern struct thread * find_thread_by_pid(pid_t, struct process *);
 extern void do_exit(long);
 
+extern struct pid_entry * tgid_base_stuff;
+
 int clear_thread_struct(struct kprobe *, struct pt_regs *);
 int fiber_timer(struct kretprobe_instance *, struct pt_regs *);
+int dummy_fnct(struct kretprobe_instance *, struct pt_regs *);
+int proc_insert_dir(struct kretprobe_instance *, struct pt_regs *);
 
 
 struct kprobe do_exit_kp;
@@ -71,7 +75,7 @@ int register_kretprobe_proc_fiber_dir(void)
         proc_fiber_dir_krp[0].entry_handler = proc_insert_dir;
         proc_fiber_dir_krp[0].handler = dummy_fnct;
         proc_fiber_dir_krp[0].kp.symbol_name = "proc_pident_readdir";
-        register_kretprobe(&fproc_fiber_dir_krp[0]);
+        register_kretprobe(&proc_fiber_dir_krp[0]);
         proc_fiber_dir_krp[1].entry_handler = proc_insert_dir;
         proc_fiber_dir_krp[1].handler = dummy_fnct;
         proc_fiber_dir_krp[1].kp.symbol_name = "proc_pident_lookup";
@@ -111,8 +115,8 @@ int proc_insert_dir(struct kretprobe_instance *ri, struct pt_regs *regs)
 {
         memcpy(tgid_base_stuff_modified, tgid_base_stuff, ARRAY_SIZE(tgid_base_stuff)*sizeof(pid_entry));
         tgid_base_stuff_modified[ARRAY_SIZE(tgid_base_stuff)] = DIR("fibers", S_IRUGO|S_IXUGO, proc_fiber_inode_operations, proc_fiber_operations); //TODO
-        regs->rdx = tgid_base_stuff_modified;
-        regs->rcx += 1;
+        regs->dx = tgid_base_stuff_modified;
+        regs->cx += 1;
         return 0;
 }
 

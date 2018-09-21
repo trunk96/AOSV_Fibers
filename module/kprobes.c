@@ -4,6 +4,7 @@
 
 #include <linux/stat.h>
 #include <linux/fs.h>
+
 #include "fibers.h"
 
 
@@ -22,6 +23,22 @@
         NOD(NAME, (S_IFREG|(MODE)), NULL, &fops, {})
 
 
+union proc_op {
+	int (*proc_get_link)(struct dentry *, struct path *);
+	int (*proc_show)(struct seq_file *m,
+		struct pid_namespace *ns, struct pid *pid,
+		struct task_struct *task);
+};
+
+struct pid_entry {
+	const char *name;
+	unsigned int len;
+	umode_t mode;
+	const struct inode_operations *iop;
+	const struct file_operations *fop;
+	union proc_op op;
+};
+
 extern struct hlist_head processes;
 extern struct process * find_process_by_tgid(pid_t);
 extern struct fiber * find_fiber_by_id(pid_t, struct process *);
@@ -29,6 +46,11 @@ extern struct thread * find_thread_by_pid(pid_t, struct process *);
 extern void do_exit(long);
 
 extern struct pid_entry * tgid_base_stuff;
+extern struct dentry *proc_task_lookup(struct inode *, struct dentry *, unsigned int);
+extern int proc_task_getattr(const struct path *, struct kstat *, u32, unsigned int);
+extern int proc_setattr(struct dentry *, struct iattr *);
+extern int proc_pid_permission(struct inode *, int);
+extern int proc_task_readdir(struct file *, struct dir_context *);
 
 int clear_thread_struct(struct kprobe *, struct pt_regs *);
 int fiber_timer(struct kretprobe_instance *, struct pt_regs *);
@@ -97,15 +119,18 @@ int dummy_fnct(struct kretprobe_instance *ri, struct pt_regs *regs)
 }
 
 
-struct pid_entry tgid_base_stuff_modified[ARRAY_SIZE(tgid_base_stuff)+1];
-struct inode_operations proc_fiber_inode_operations = {
+//struct pid_entry tgid_base_stuff_modified[ARRAY_SIZE(tgid_base_stuff)+1];
+ssize_t tgid_base_stuff_size = sizeof(tgid_base_stuff)/sizeof(struct pid_entry);
+struct pid_entry tgid_base_stuff_modified[(sizeof(tgid_base_stuff)/sizeof(struct pid_entry))+1];
+
+static const struct inode_operations proc_fiber_inode_operations = {
 	.lookup		= proc_task_lookup,
 	.getattr	= proc_task_getattr,
 	.setattr	= proc_setattr,
 	.permission	= proc_pid_permission,
 };
 
-struct file_operations proc_fiber_operations = {
+static const struct file_operations proc_fiber_operations = {
 	.read		= generic_read_dir,
 	.iterate_shared	= proc_task_readdir,
 	.llseek		= generic_file_llseek,
@@ -113,8 +138,9 @@ struct file_operations proc_fiber_operations = {
 
 int proc_insert_dir(struct kretprobe_instance *ri, struct pt_regs *regs)
 {
-        memcpy(tgid_base_stuff_modified, tgid_base_stuff, ARRAY_SIZE(tgid_base_stuff)*sizeof(pid_entry));
-        tgid_base_stuff_modified[ARRAY_SIZE(tgid_base_stuff)] = DIR("fibers", S_IRUGO|S_IXUGO, proc_fiber_inode_operations, proc_fiber_operations); //TODO
+        memcpy(tgid_base_stuff_modified, tgid_base_stuff, tgid_base_stuff_size*sizeof(struct pid_entry));
+        struct pid_entry new_entry = DIR("fibers", S_IRUGO|S_IXUGO, proc_fiber_inode_operations, proc_fiber_operations);
+        tgid_base_stuff_modified[tgid_base_stuff_size] = new_entry; //TODO
         regs->dx = tgid_base_stuff_modified;
         regs->cx += 1;
         return 0;

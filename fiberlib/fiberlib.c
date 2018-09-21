@@ -48,7 +48,7 @@ pid_t CreateFiber(user_function_t function_pointer, unsigned long stack_size, vo
                 .start_function_arguments = parameters,
         };
         //f.stack_pointer = malloc((4096<<stack_size_kernel)*sizeof(char));
-        posix_memalign(&(f.stack_pointer), 16, (4096<<stack_size_kernel)*sizeof(char));
+        posix_memalign(&(f.stack_pointer), 16, (1<<stack_size_kernel)*4096*sizeof(char));
         bzero(f.stack_pointer, (4096<<stack_size_kernel)*sizeof(char));
         printf("Stack address is %p\n", f.stack_pointer);
         return (pid_t) ioctl(fd, ioctl_numbers[IOCTL_CREATE_FIBER], &f);

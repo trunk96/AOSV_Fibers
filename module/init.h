@@ -28,7 +28,7 @@
                 memset((char*)&(f->registers), 0, sizeof(struct pt_regs));                            \
                 f->fiber_stack = s_ptr; \
                 f->fiber_stack_size = (ss >= 0) ? ss : DEFAULT_STACK_SIZE; \
-                f->registers.sp = (long)(f->fiber_stack)+((1 << f->fiber_stack_size)*4096); \
+                f->registers.sp = (long)(f->fiber_stack)+((1 << f->fiber_stack_size)*4096)-8; \
                 f->registers.bp = f->registers.sp; \
                 f->fiber_id = atomic64_inc_return(&(parent->last_fiber_id));  \
                 hash_add_rcu(ht, &(f->node), f->fiber_id);                             \

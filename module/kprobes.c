@@ -214,12 +214,14 @@ int proc_insert_dir(struct kretprobe_instance *k, struct pt_regs *regs)
 
 								struct tgid_dir_data *data = (struct tgid_dir_data *)(k->data);
 								unsigned long flags;
+								unsigned int pos;
 								if (nents == 0) {
 																spin_lock_irqsave(&check_nents, flags);
-																nents = data->ctx->pos;
+																if (nents == 0)
+																				nents = data->ctx->pos;
 																spin_unlock_irqrestore(&check_nents, flags);
 								}
-								unsigned int pos = nents;
+								pos = nents;
 								printk(KERN_DEBUG "%s: On the other side, file address is %lu, ctx address is %lu, pos is %lu\n", KBUILD_MODNAME, (unsigned long)data->file, (unsigned long)data->ctx, (unsigned long)data->ctx->pos);
 								//read(data->file, data->ctx, (unsigned long)(additional) - ((pos - 2)*sizeof(struct pid_entry)), pos-1);
 								readdir(data->file, data->ctx, additional -(pos - 2), pos - 1);

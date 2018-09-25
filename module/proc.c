@@ -11,41 +11,6 @@ extern struct fiber * find_fiber_by_id(pid_t, struct process *);
 ssize_t proc_fiber_read(struct file *, char __user *, size_t, loff_t *);
 
 
-union proc_op {
-	int (*proc_get_link)(struct dentry *, struct path *);
-	int (*proc_show)(struct seq_file *m,
-		struct pid_namespace *ns, struct pid *pid,
-		struct task_struct *task);
-};
-
-struct pid_entry {
-	const char *name;
-	unsigned int len;
-	umode_t mode;
-	const struct inode_operations *iop;
-	const struct file_operations *fop;
-	union proc_op op;
-};
-
-
-#define NOD(NAME, MODE, IOP, FOP, OP) {     \
-                .name = (NAME),         \
-                .len  = sizeof(NAME) - 1,     \
-                .mode = MODE,         \
-                .iop  = IOP,          \
-                .fop  = FOP,          \
-                .op   = OP,         \
-}
-
-#define DIR(NAME, MODE, iops, fops) \
-        NOD(NAME, (S_IFDIR|(MODE)), &iops, &fops, {} )
-#define REG(NAME, MODE, fops)       \
-        NOD(NAME, (S_IFREG|(MODE)), NULL, &fops, {})
-
-
-
-
-
 
 ssize_t proc_fiber_read(struct file *filp, char __user *buf, size_t len, loff_t *off){
         //build the string

@@ -8,40 +8,97 @@
 extern struct process * find_process_by_tgid(pid_t);
 extern struct fiber * find_fiber_by_id(pid_t, struct process *);
 
+union proc_op {
+								int (*proc_get_link)(struct dentry *, struct path *);
+								int (*proc_show)(struct seq_file *m, struct pid_namespace *ns, struct pid *pid, struct task_struct *task);
+};
+
+struct proc_inode {
+	struct pid *pid;
+	unsigned int fd;
+	union proc_op op;
+	struct proc_dir_entry *pde;
+	struct ctl_table_header *sysctl;
+	struct ctl_table *sysctl_entry;
+	struct hlist_node sysctl_inodes;
+	const struct proc_ns_operations *ns_ops;
+	struct inode vfs_inode;
+};
+
 
 
 ssize_t proc_fiber_read(struct file *, char __user *, size_t, loff_t *);
 int proc_fiber_init(struct process *);
 void proc_fiber_exit(struct process *);
+int proc_fiber_base_readdir(struct file *, struct dir_context *);
+
+static inline struct proc_inode *PROC_I(const struct inode *inode)
+{
+	return container_of(inode, struct proc_inode, vfs_inode);
+}
+
+static inline struct pid *proc_pid(struct inode *inode)
+{
+	return PROC_I(inode)->pid;
+}
+
+
+
+typedef int (*proc_readdir_de_t)(struct file *, struct dir_context *, struct proc_dir_entry *);
+
+struct process * get_proc_process_fiber(struct inode *dir){
+        struct task_struct *task;
+        struct process *p = NULL;
+
+        rcu_read_lock();
+        task = pid_task(proc_pid(dir), PIDTYPE_PID);
+        if (task != NULL) {
+                p = find_process_by_tgid(task->tgid);
+        }
+        rcu_read_unlock();
+        return p;
+}
+
+int proc_fiber_base_readdir(struct file *file, struct dir_context *ctx)
+{
+        struct process *p = get_proc_process_fiber(file_inode(file));
+        int ret;
+
+        if (p != NULL) {
+                proc_readdir_de_t proc_readdir_de = (proc_readdir_de_t) kallsyms_lookup_name("proc_readdir_de");
+                ret = proc_readdir_de(file, ctx, p->proc_fiber);
+        }
+        return ret;
+}
 
 
 int proc_fiber_init(struct process *p)
 {
 
         /*struct proc_dir_entry *fiber;
-        int err;
+           int err;
 
-        err = -ENOMEM;
+           err = -ENOMEM;
 
-        //fiber = kmem_cache_zalloc(proc_dir_entry_cache, GFP_KERNEL);
-        fiber = kzalloc(sizeof(struct proc_dir_entry), GFP_KERNEL);
-        if (!fiber)
+           //fiber = kmem_cache_zalloc(proc_dir_entry_cache, GFP_KERNEL);
+           fiber = kzalloc(sizeof(struct proc_dir_entry), GFP_KERNEL);
+           if (!fiber)
                 goto out;
 
-        fiber->subdir = RB_ROOT;
-        fiber->data = p;
-        fiber->nlink = 1;
-        fiber->namelen = 6;
-        fiber->parent = (struct proc_dir_entry *) kallsyms_lookup_name("proc_root");
-        fiber->name = fiber->inline_name;
-        memcpy(fiber->name, "fibers", 7);
+           fiber->subdir = RB_ROOT;
+           fiber->data = p;
+           fiber->nlink = 1;
+           fiber->namelen = 6;
+           fiber->parent = (struct proc_dir_entry *) kallsyms_lookup_name("proc_root");
+           fiber->name = fiber->inline_name;
+           memcpy(fiber->name, "fibers", 7);
 
-        err = -EEXIST;
+           err = -EEXIST;
 
-        p->proc_fiber = fiber;
-        return 0;
-out:
-        return err;*/
+           p->proc_fiber = fiber;
+           return 0;
+           out:
+           return err;*/
         struct proc_dir_entry *proc_root = (struct proc_dir_entry *) kallsyms_lookup_name("proc_root");
         struct proc_dir_entry *(*__proc_create)(struct proc_dir_entry **parent, const char *name, umode_t mode, nlink_t nlink) = kallsyms_lookup_name("__proc_create");
         return p->proc_fiber = __proc_create(&proc_root, "fibers", S_IFDIR, 2);
@@ -51,10 +108,10 @@ void proc_fiber_exit(struct process *p)
 {
         /*if (S_ISLNK(p->proc_fiber->mode))
                 kfree(p->proc_fiber->data);
-        if (p->proc_fiber->name != p->proc_fiber->inline_name)
+           if (p->proc_fiber->name != p->proc_fiber->inline_name)
                 kfree(p->proc_fiber->name);
-      kfree(p->proc_fiber);*/
-      proc_remove(p->proc_fiber);
+           kfree(p->proc_fiber);*/
+        proc_remove(p->proc_fiber);
 }
 
 

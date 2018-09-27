@@ -108,7 +108,7 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
 
                 snprintf(name, 256, "%d_%d",ep->process_id, fp->fiber_id);
                 //fp->fiber_proc_entry = proc_create_data(name, 0, NULL, &fops, &(fp->fiber_info));
-                fp->fiber_proc_entry = proc_create_data(name, 0, NULL, &fops, &(fp->fiber_info));
+                fp->fiber_proc_entry = proc_create_data(name, 0, ep->proc_fiber, &fops, &(fp->fiber_info));
                 //fp->fiber_proc_entry = proc_create("name_1", 0, NULL, &fops);
 
                 printk(KERN_DEBUG "[%s] created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
@@ -135,6 +135,17 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
 
         fp->attached_thread = gp;
         gp->selected_fiber = fp;
+
+        char name[256] = "";
+        /*snprintf(name, 256, "%d", current->tgid);
+        struct proc_dir_entry *proc_parent = proc_mkdir(name, NULL);
+        ep->proc_entry = proc_mkdir("fibers", proc_parent);*/
+
+
+        snprintf(name, 256, "%d_%d",ep->process_id, fp->fiber_id);
+        //fp->fiber_proc_entry = proc_create_data(name, 0, NULL, &fops, &(fp->fiber_info));
+        fp->fiber_proc_entry = proc_create_data(name, 0, ep->proc_fiber, &fops, &(fp->fiber_info));
+
         printk(KERN_DEBUG "[%s] created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
         return fp->fiber_id;
 }
@@ -179,7 +190,7 @@ pid_t do_CreateFiber(void *stack_pointer, unsigned long stack_size, user_functio
 
         char name[256] = "";
         snprintf(name, 256, "%d_%d",ep->process_id, fp->fiber_id);
-        fp->fiber_proc_entry = proc_create_data(name, 0, NULL, &fops, &(fp->fiber_info));
+        fp->fiber_proc_entry = proc_create_data(name, 0, ep->proc_fiber, &fops, &(fp->fiber_info));
 
 
         printk(KERN_DEBUG "[%s] created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);

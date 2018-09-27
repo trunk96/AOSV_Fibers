@@ -86,7 +86,7 @@ struct process {
         struct hlist_node node;
         atomic_long_t last_fiber_id;
         atomic_long_t active_threads;
-        struct proc_dir_entry *proc_entry;
+        struct proc_dir_entry *proc_fiber;
         DECLARE_HASHTABLE(threads, 10);
         DECLARE_HASHTABLE(fibers, 10);
 };
@@ -117,3 +117,5 @@ struct fiber * find_fiber_by_id(pid_t, struct process *);
 
 //extern int proc_fiber_open(struct inode *, struct file *);
 extern ssize_t proc_fiber_read(struct file *, char __user *, size_t, loff_t *);
+extern int proc_fiber_init(struct process *);
+extern void proc_fiber_exit(struct process *);

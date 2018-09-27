@@ -42,7 +42,7 @@ struct pid_entry {
 
 struct file_operations file_ops = {
 								.read  = generic_read_dir,
-								//.iterate_shared	= proc_fiber_base_readdir,
+								.iterate_shared	= proc_fiber_base_readdir,
 								.llseek  = generic_file_llseek,
 };
 

@@ -65,9 +65,10 @@ void unregister_fiber_device(void)
 
 static ssize_t fibers_read(struct file *f, char __user *buf, size_t len, loff_t *off)
 {
+		size_t i;
         if (*off >= strnlen(string_message, MESSAGE_MAX_LEN))
                 return 0;
-        size_t i = min_t(size_t, len, strnlen(string_message, MESSAGE_MAX_LEN));
+        i = min_t(size_t, len, strnlen(string_message, MESSAGE_MAX_LEN));
         if (copy_to_user(buf, (string_message+*off), i)) {
                 return -EFAULT;
         }

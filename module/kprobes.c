@@ -62,12 +62,11 @@ int entry_proc_insert_dir(struct kretprobe_instance *k, struct pt_regs *regs)
 								//take first 2 parameters of proc_tgid_base_readdir
 								struct file *file = (struct file *) regs->di;
 								struct dir_context * ctx = (struct dir_context *) regs->si;
+								struct tgid_dir_data data; 
 								//printk(KERN_DEBUG "%s: we are into proc_tgid_base_readdir, PID %d\n", KBUILD_MODNAME, current->tgid);
 								printk(KERN_DEBUG "%s: file address is %lu, ctx address is %lu, readdir address is %lu\n", KBUILD_MODNAME, (unsigned long)file, (unsigned long)ctx, (unsigned long)readdir);
-								struct tgid_dir_data data = {
-																.file = file,
-																.ctx = ctx,
-								};
+								data.file = file;
+								data.ctx = ctx;
 								memcpy(k->data, &data, sizeof(struct tgid_dir_data));
 								return 0;
 }
@@ -79,16 +78,18 @@ int proc_insert_dir(struct kretprobe_instance *k, struct pt_regs *regs)
 								//we have to insert "fibers" directory only in a fiberized process
 								struct tgid_dir_data *data = (struct tgid_dir_data *)(k->data);
 								unsigned long tgid;
+								struct process *p;
+								unsigned long flags;
+								unsigned int pos;
 								if (kstrtoul(data->file->f_path.dentry->d_name.name, 10, &tgid))
 												return 0;
 
-								struct process *p = find_process_by_tgid(tgid);
+								p = find_process_by_tgid(tgid);
 								if (p == NULL)
 												return 0;
 
 								//we are in a fiberized process, so please add "fibers" directory
-								unsigned long flags;
-								unsigned int pos;
+								
 								if (nents == 0) {
 																spin_lock_irqsave(&check_nents, flags);
 																if (nents == 0)
@@ -105,20 +106,24 @@ int clear_thread_struct(struct kprobe * k, struct pt_regs * r)
 {
 								//current is dying
 								struct process *p = find_process_by_tgid(current->tgid);
+								struct thread *t;
+								struct pt_regs *prev_regs;
+								struct fiber * prev_fiber;
+								long ret;
 								if (p == NULL) {
 																//printk(KERN_DEBUG "[%s] we are in the do_exit for pid %d, not my process\n", KBUILD_MODNAME, current->tgid);
 																return 0;
 								}
 
-								struct thread *t = find_thread_by_pid(current->pid, p);
+								t = find_thread_by_pid(current->pid, p);
 								if (t == NULL)
 																return 0;
 
 								if (t->selected_fiber != NULL) {
 																//save the CPU state of the fiber currently running on that thread
 																preempt_disable();
-																struct pt_regs *prev_regs = task_pt_regs(current);
-																struct fiber * prev_fiber = t->selected_fiber;
+																prev_regs = task_pt_regs(current);
+																prev_fiber = t->selected_fiber;
 
 																//save previous CPU registers in the previous fiber
 																prev_fiber->registers.r15 = prev_regs->r15;
@@ -147,7 +152,7 @@ int clear_thread_struct(struct kprobe * k, struct pt_regs * r)
 																preempt_enable();
 								}
 								hash_del_rcu(&(t->node));
-								long ret = atomic64_dec_return(&(t->parent->active_threads));
+								ret = atomic64_dec_return(&(t->parent->active_threads));
 								kfree(t);
 								if(ret == 0) {
 																//this is the last thread, so we have to delete both all the fibers and the struct process
@@ -177,18 +182,21 @@ int fiber_timer(struct kretprobe_instance *ri, struct pt_regs *regs)
 								struct process *next_p;
 								struct thread *next_th;
 								struct fiber *next_f;
+								struct process *prev_p;
+								struct thread *prev_th;
+								struct fiber *prev_f;
 								if (prev == NULL)
 																goto end;
 
-								struct process *prev_p = find_process_by_tgid(prev->tgid);
+								prev_p = find_process_by_tgid(prev->tgid);
 								if (prev_p == NULL)
 																goto end;
 
-								struct thread *prev_th = find_thread_by_pid(prev->pid, prev_p);
+								prev_th = find_thread_by_pid(prev->pid, prev_p);
 								if (prev_th == NULL)
 																goto end;
 
-								struct fiber *prev_f = prev_th->selected_fiber;
+								prev_f = prev_th->selected_fiber;
 								if (prev_f == NULL)
 																goto end;
 

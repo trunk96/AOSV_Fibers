@@ -9,6 +9,8 @@
 DEFINE_HASHTABLE(processes, 10);
 //is the same of struct hlist_head processes[2<<10] = {...};
 
+spinlock_t struct_process_lock;
+unsigned long struct_process_flags;
 
 struct file_operations fops = {
         read: proc_fiber_read
@@ -80,6 +82,8 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
         struct process *ep;
         struct thread *gp;
         struct fiber *fp;
+        char name[256] = "";
+/*
         ep = find_process_by_tgid(current->tgid);
         //if ep==NULL then it is the first time the process calls our module
         if (ep == NULL) {
@@ -101,9 +105,9 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
 
                 //create the proc directory for the process
                 char name[256] = "";
-                /*snprintf(name, 256, "%d", current->tgid);
-                struct proc_dir_entry *proc_parent = proc_mkdir(name, NULL);
-                ep->proc_entry = proc_mkdir("fibers", proc_parent);*/
+                //snprintf(name, 256, "%d", current->tgid);
+                //struct proc_dir_entry *proc_parent = proc_mkdir(name, NULL);
+                //ep->proc_entry = proc_mkdir("fibers", proc_parent);
 
 
                 snprintf(name, 256, "%d_%d",ep->process_id, fp->fiber_id);
@@ -114,7 +118,17 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
                 printk(KERN_DEBUG "[%s] created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
                 return fp->fiber_id;
         }
-        //if ep!=NULL then we found the process
+*/       
+
+		//Check if struct process already exists in an atomic way
+		spin_lock_irqsave(&(struct_process_lock), struct_process_flags);
+        ep = find_process_by_tgid(current->tgid);
+        if (ep == NULL) {
+                init_process(ep, processes);
+        }
+        spin_unlock_irqrestore(&(struct_process_lock), struct_process_flags);       
+        
+        //Now the struct process exists and we can convert the thread, if not already fiber
 
         gp = find_thread_by_pid(thread_id, ep);
         if (gp != NULL) {
@@ -136,7 +150,6 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
         fp->attached_thread = gp;
         gp->selected_fiber = fp;
 
-        char name[256] = "";
         /*snprintf(name, 256, "%d", current->tgid);
         struct proc_dir_entry *proc_parent = proc_mkdir(name, NULL);
         ep->proc_entry = proc_mkdir("fibers", proc_parent);*/
@@ -155,6 +168,7 @@ pid_t do_CreateFiber(void *stack_pointer, unsigned long stack_size, user_functio
         struct process *ep;
         struct thread *gp;
         struct fiber *fp;
+        char name[256] = "";
         ep = find_process_by_tgid(current->tgid);
         if (ep == NULL) {
                 return -2;  //-2 means that the thread calling CreateFiber is not a fiber itself.
@@ -188,7 +202,6 @@ pid_t do_CreateFiber(void *stack_pointer, unsigned long stack_size, user_functio
         memcpy(&data, &pinfo, sizeof(void*));
         fp->fiber_proc_entry = proc_create_data(name, 0666, ep->proc_entry, &fops, data);*/
 
-        char name[256] = "";
         snprintf(name, 256, "%d_%d",ep->process_id, fp->fiber_id);
         fp->fiber_proc_entry = proc_create_data(name, 0, ep->proc_fiber, &fops, &(fp->fiber_info));
 
@@ -203,6 +216,12 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         unsigned long flags;
         struct process *ep;
         struct thread *tp;
+        struct fiber *f;
+        struct fiber * prev_fiber;
+        struct pt_regs *prev_regs;
+        struct fpu *prev_fpu;
+        struct fpu *next_fpu;
+        struct fxregs_state * next_fx_regs;
 
         ep = find_process_by_tgid(current->tgid);
 
@@ -214,7 +233,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         if (tp == NULL)
                 return -1;
 
-        struct fiber *f = find_fiber_by_id(fiber_id, ep);
+        f = find_fiber_by_id(fiber_id, ep);
 
         if (f == NULL)
                 return -1;
@@ -232,7 +251,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         //printk(KERN_DEBUG "%s exited from critical section\n", KBUILD_MODNAME);
 
 
-        struct fiber * prev_fiber = tp->selected_fiber;
+        prev_fiber = tp->selected_fiber;
         //prev_fiber->total_time += (current->utime-prev_fiber->prev_time);
         prev_fiber->total_time += current->utime;
 
@@ -241,7 +260,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         //kernel_fpu_begin();
         preempt_disable();
 
-        struct pt_regs *prev_regs = task_pt_regs(current);
+        prev_regs = task_pt_regs(current);
 
 
         //save previous CPU registers in the previous fiber
@@ -273,7 +292,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         /*if (!copy_fpregs_to_fpstate(&(prev_fiber->fpu))) {
                 copy_kernel_to_fpregs(&(prev_fiber->fpu.state));
         }*/
-        struct fpu *prev_fpu = &(prev_fiber->fpu);
+        prev_fpu = &(prev_fiber->fpu);
         copy_fxregs_to_kernel(prev_fpu);
 
         //restore next CPU context from the next fiber
@@ -304,8 +323,8 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         /*struct fpu *next_fpu = &(f->fpu);
         fpu__restore(next_fpu);*/
 
-        struct fpu *next_fpu = &(f->fpu);
-        struct fxregs_state * next_fx_regs = &(next_fpu->state.fxsave);
+        next_fpu = &(f->fpu);
+        next_fx_regs = &(next_fpu->state.fxsave);
         copy_kernel_to_fxregs(next_fx_regs);
 
         /*fpregs_activate(next_fpu);
@@ -320,13 +339,17 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
 long do_FlsAlloc(unsigned long alloc_size, pid_t thread_id)
 {
         struct process *p = find_process_by_tgid(current->tgid);
+        struct thread *t;
+        struct fiber *f;
+        int counter = 0;
+        unsigned long index;
+        
         if (p == NULL)
                 return -1;
-        struct thread *t = find_thread_by_pid(thread_id, p);
+        t = find_thread_by_pid(thread_id, p);
         if (t == NULL || t->selected_fiber == NULL)
                 return -1;
-        struct fiber *f = t->selected_fiber;
-        int counter = 0;
+        f = t->selected_fiber;
         while(counter < FLS_BITMAP_SIZE && (long)f->fls_bitmap[counter] == -1) {
                 counter++;
         }
@@ -334,7 +357,7 @@ long do_FlsAlloc(unsigned long alloc_size, pid_t thread_id)
                 return -1;
 
         //there is room for an allocation
-        unsigned long index = find_first_zero_bit(f->fls_bitmap, FLS_BITMAP_SIZE*sizeof(unsigned long)*64);
+        index = find_first_zero_bit(f->fls_bitmap, FLS_BITMAP_SIZE*sizeof(unsigned long)*64);
         change_bit(index, f->fls_bitmap);
         f->fls[index].fls_data = kmalloc(alloc_size*sizeof(char), GFP_USER);
         f->fls[index].size = alloc_size;
@@ -345,12 +368,15 @@ long do_FlsAlloc(unsigned long alloc_size, pid_t thread_id)
 long do_FlsFree(unsigned long index, pid_t thread_id)
 {
         struct process *p = find_process_by_tgid(current->tgid);
+        struct thread *t;
+        struct fiber *f;
+        
         if (p == NULL)
                 return -1;
-        struct thread *t = find_thread_by_pid(thread_id, p);
+        t = find_thread_by_pid(thread_id, p);
         if (t == NULL || t->selected_fiber == NULL)
                 return -1;
-        struct fiber *f = t->selected_fiber;
+        f = t->selected_fiber;
 
         if (index >= MAX_FLS_POINTERS || index < 0)
                 return -1;
@@ -370,12 +396,15 @@ long do_FlsFree(unsigned long index, pid_t thread_id)
 long do_FlsGetValue(unsigned long index, unsigned long buffer, pid_t thread_id)
 {
         struct process *p = find_process_by_tgid(current->tgid);
+        struct thread *t;
+        struct fiber *f;
+        
         if (p == NULL)
                 return -1;
-        struct thread *t = find_thread_by_pid(thread_id, p);
+        t = find_thread_by_pid(thread_id, p);
         if (t == NULL || t->selected_fiber == NULL)
                 return -1;
-        struct fiber *f = t->selected_fiber;
+        f = t->selected_fiber;
 
         if (index >= MAX_FLS_POINTERS || index < 0)
                 return -1;
@@ -398,12 +427,15 @@ long do_FlsGetValue(unsigned long index, unsigned long buffer, pid_t thread_id)
 long do_FlsSetValue(unsigned long index, unsigned long value, pid_t thread_id)
 {
         struct process *p = find_process_by_tgid(current->tgid);
+        struct thread *t;
+        struct fiber *f;
+        
         if (p == NULL)
                 return -1;
-        struct thread *t = find_thread_by_pid(thread_id, p);
+        t = find_thread_by_pid(thread_id, p);
         if (t == NULL || t->selected_fiber == NULL)
                 return -1;
-        struct fiber *f = t->selected_fiber;
+        f = t->selected_fiber;
         printk(KERN_DEBUG "[%s] Index given from PID %d is %ld\n", KBUILD_MODNAME, p->process_id, index);
 
         if (index >= MAX_FLS_POINTERS || index < 0)

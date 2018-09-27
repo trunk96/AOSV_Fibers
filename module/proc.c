@@ -62,10 +62,11 @@ struct process * get_proc_process_fiber(struct inode *dir){
 int proc_fiber_base_readdir(struct file *file, struct dir_context *ctx)
 {
         struct process *p = get_proc_process_fiber(file_inode(file));
+        proc_readdir_de_t proc_readdir_de;
         int ret;
 
         if (p != NULL) {
-                proc_readdir_de_t proc_readdir_de = (proc_readdir_de_t) kallsyms_lookup_name("proc_readdir_de");
+                proc_readdir_de = (proc_readdir_de_t) kallsyms_lookup_name("proc_readdir_de");
                 ret = proc_readdir_de(file, ctx, p->proc_fiber);
         }
         return ret;
@@ -120,7 +121,11 @@ ssize_t proc_fiber_read(struct file *filp, char __user *buf, size_t len, loff_t 
         //build the string
         char string_abc[4096] = "";
         struct proc_info *pinfo;
+        struct process *ep;
+        struct fiber *fp;
+        size_t i;
         void * data = (PDE_DATA(file_inode(filp)));
+        
         if (data == NULL)
                 return 0;
 
@@ -128,12 +133,12 @@ ssize_t proc_fiber_read(struct file *filp, char __user *buf, size_t len, loff_t 
 
         //printk(KERN_DEBUG "%s: proc received PID %d and FID %d\n", KBUILD_MODNAME, pinfo->process_id, pinfo->fiber_id);
 
-        struct process *ep = find_process_by_tgid(pinfo->process_id);
+        ep = find_process_by_tgid(pinfo->process_id);
 
         if (ep == NULL)
                 return 0;
 
-        struct fiber *fp = find_fiber_by_id(pinfo->fiber_id, ep);
+        fp = find_fiber_by_id(pinfo->fiber_id, ep);
 
         if (fp == NULL)
                 return 0;
@@ -145,7 +150,7 @@ ssize_t proc_fiber_read(struct file *filp, char __user *buf, size_t len, loff_t 
 
         if (*off >= strnlen(string_abc, 4096))
                 return 0;
-        size_t i = min_t(size_t, len, strnlen(string_abc, 4096));
+        i = min_t(size_t, len, strnlen(string_abc, 4096));
         if (copy_to_user(buf, string_abc, i)) {
                 return -EFAULT;
         }

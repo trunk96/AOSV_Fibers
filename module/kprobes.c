@@ -34,11 +34,15 @@ int unregister_kretprobe_finish_task_switch(void)
 int register_kretprobe_proc_fiber_dir(void)
 {
 								readdir = (proc_pident_readdir_t) kallsyms_lookup_name("proc_pident_readdir");
+								setattr = (proc_setattr_t) kallsyms_lookup_name("proc_setattr");
+								getattr = (pid_getattr_t) kallsyms_lookup_name("pid_getattr");
 								proc_readdir_krp.entry_handler = entry_proc_insert_dir;
 								proc_readdir_krp.handler = proc_insert_dir;
 								proc_readdir_krp.data_size = sizeof(struct tgid_dir_data);
 								proc_readdir_krp.kp.symbol_name = "proc_tgid_base_readdir";
 								register_kretprobe(&proc_readdir_krp);
+								inode_ops.getattr = getattr;
+								inode_ops.setattr = setattr;
 								return 0;
 }
 
@@ -62,7 +66,7 @@ int entry_proc_insert_dir(struct kretprobe_instance *k, struct pt_regs *regs)
 								//take first 2 parameters of proc_tgid_base_readdir
 								struct file *file = (struct file *) regs->di;
 								struct dir_context * ctx = (struct dir_context *) regs->si;
-								struct tgid_dir_data data; 
+								struct tgid_dir_data data;
 								//printk(KERN_DEBUG "%s: we are into proc_tgid_base_readdir, PID %d\n", KBUILD_MODNAME, current->tgid);
 								printk(KERN_DEBUG "%s: file address is %lu, ctx address is %lu, readdir address is %lu\n", KBUILD_MODNAME, (unsigned long)file, (unsigned long)ctx, (unsigned long)readdir);
 								data.file = file;
@@ -89,7 +93,7 @@ int proc_insert_dir(struct kretprobe_instance *k, struct pt_regs *regs)
 												return 0;
 
 								//we are in a fiberized process, so please add "fibers" directory
-								
+
 								if (nents == 0) {
 																spin_lock_irqsave(&check_nents, flags);
 																if (nents == 0)

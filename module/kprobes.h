@@ -10,6 +10,7 @@
 #include "fibers.h"
 
 extern int proc_fiber_base_readdir(struct file *, struct dir_context *);
+extern struct dentry *proc_fiber_base_lookup(struct inode *, struct dentry *, unsigned int);
 union proc_op {
 								int (*proc_get_link)(struct dentry *, struct path *);
 								int (*proc_show)(struct seq_file *m, struct pid_namespace *ns, struct pid *pid, struct task_struct *task);
@@ -46,7 +47,9 @@ struct file_operations file_ops = {
 								.llseek  = generic_file_llseek,
 };
 
-struct inode_operations inode_ops;
+struct inode_operations inode_ops = {
+								.lookup = proc_fiber_base_lookup,
+};
 
 
 const struct pid_entry additional[] = {
@@ -73,9 +76,14 @@ int entry_proc_insert_dir(struct kretprobe_instance *, struct pt_regs *);
 
 typedef int (*proc_pident_readdir_t)(struct file *file, struct dir_context *ctx, const struct pid_entry *ents, unsigned int nents);
 typedef struct dentry * (*proc_pident_lookup_t)(struct inode *dir, struct dentry *dentry, const struct pid_entry *ents, unsigned int nents);
+typedef int (*pid_getattr_t)(const struct path *, struct kstat *, u32, unsigned int);
+typedef int (*proc_setattr_t)(struct dentry *dentry, struct iattr *attr);
 
 proc_pident_readdir_t readdir;
 proc_pident_lookup_t look;
+pid_getattr_t getattr;
+proc_setattr_t setattr;
+
 
 spinlock_t check_nents = __SPIN_LOCK_UNLOCKED(check_nents);
 int nents = 0;

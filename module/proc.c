@@ -45,6 +45,7 @@ static inline struct pid *proc_pid(struct inode *inode)
 
 
 typedef int (*proc_readdir_de_t)(struct file *, struct dir_context *, struct proc_dir_entry *);
+typedef struct proc_dir_entry *(*__proc_create_t)(struct proc_dir_entry **, const char *, umode_t, nlink_t);
 
 struct process * get_proc_process_fiber(struct inode *dir){
         struct task_struct *task;
@@ -63,7 +64,7 @@ int proc_fiber_base_readdir(struct file *file, struct dir_context *ctx)
 {
         struct process *p = get_proc_process_fiber(file_inode(file));
         proc_readdir_de_t proc_readdir_de;
-        int ret;
+        int ret = -1;
 
         if (p != NULL) {
                 proc_readdir_de = (proc_readdir_de_t) kallsyms_lookup_name("proc_readdir_de");
@@ -101,8 +102,9 @@ int proc_fiber_init(struct process *p)
            out:
            return err;*/
         struct proc_dir_entry *proc_root = (struct proc_dir_entry *) kallsyms_lookup_name("proc_root");
-        struct proc_dir_entry *(*__proc_create)(struct proc_dir_entry **parent, const char *name, umode_t mode, nlink_t nlink) = kallsyms_lookup_name("__proc_create");
-        return p->proc_fiber = __proc_create(&proc_root, "fibers", S_IFDIR, 2);
+        __proc_create_t __proc_create = (__proc_create_t) kallsyms_lookup_name("__proc_create");
+        p->proc_fiber = __proc_create(&proc_root, "fibers", S_IFDIR, 2);
+				return 0;
 }
 
 void proc_fiber_exit(struct process *p)
@@ -119,13 +121,13 @@ void proc_fiber_exit(struct process *p)
 
 ssize_t proc_fiber_read(struct file *filp, char __user *buf, size_t len, loff_t *off){
         //build the string
-        char string_abc[4096] = "";
+        char string_abc[512] = "";
         struct proc_info *pinfo;
         struct process *ep;
         struct fiber *fp;
         size_t i;
         void * data = (PDE_DATA(file_inode(filp)));
-        
+
         if (data == NULL)
                 return 0;
 

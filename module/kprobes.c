@@ -171,6 +171,7 @@ int clear_thread_struct(struct kprobe * k, struct pt_regs * r)
 																								kfree(f);
 																}
 																hash_del_rcu(&(p->node));
+																//proc_fiber_exit(p);
 																kfree(p);
 																printk(KERN_DEBUG "[%s] PID %d cleared!\n", KBUILD_MODNAME, current->tgid);
 								}

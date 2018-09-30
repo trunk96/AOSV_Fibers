@@ -65,6 +65,7 @@ int main()
 {
         printf("Starting main...\n");
         int my_fiber = ConvertThreadToFiber();
+        printf("ConvertThreadToFiber done\n");
         char c = 'c';
         int new_fiber = CreateFiber(function, 6, &c);
         SwitchToFiber(new_fiber);

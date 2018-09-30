@@ -6,7 +6,6 @@
                 hash_init(p->threads);                    \
                 hash_init(p->fibers);                     \
                 hash_add_rcu(ht, &(p->node), p->process_id);  \
-                proc_fiber_init(p);                       \
 } while(0)
 
 #define init_thread(t, parent_process, ht, id) do {       \

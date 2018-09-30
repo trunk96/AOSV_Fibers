@@ -12,9 +12,7 @@ DEFINE_HASHTABLE(processes, 10);
 spinlock_t struct_process_lock;
 unsigned long struct_process_flags;
 
-struct file_operations fops = {
-        read: proc_fiber_read
-};
+
 
 struct process * find_process_by_tgid(pid_t tgid)
 {
@@ -118,7 +116,7 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
                 printk(KERN_DEBUG "[%s] created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
                 return fp->fiber_id;
         }
-*/       
+*/
 
 		//Check if struct process already exists in an atomic way
 		spin_lock_irqsave(&(struct_process_lock), struct_process_flags);
@@ -126,8 +124,8 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
         if (ep == NULL) {
                 init_process(ep, processes);
         }
-        spin_unlock_irqrestore(&(struct_process_lock), struct_process_flags);       
-        
+        spin_unlock_irqrestore(&(struct_process_lock), struct_process_flags);
+
         //Now the struct process exists and we can convert the thread, if not already fiber
 
         gp = find_thread_by_pid(thread_id, ep);
@@ -157,7 +155,7 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
 
         snprintf(name, 256, "%d_%d",ep->process_id, fp->fiber_id);
         //fp->fiber_proc_entry = proc_create_data(name, 0, NULL, &fops, &(fp->fiber_info));
-        fp->fiber_proc_entry = proc_create_data(name, 0, ep->proc_fiber, &fops, &(fp->fiber_info));
+        //fp->fiber_proc_entry = proc_create_data(name, 0, ep->proc_fiber, &fops, &(fp->fiber_info));
 
         printk(KERN_DEBUG "[%s] created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
         return fp->fiber_id;
@@ -203,7 +201,7 @@ pid_t do_CreateFiber(void *stack_pointer, unsigned long stack_size, user_functio
         fp->fiber_proc_entry = proc_create_data(name, 0666, ep->proc_entry, &fops, data);*/
 
         snprintf(name, 256, "%d_%d",ep->process_id, fp->fiber_id);
-        fp->fiber_proc_entry = proc_create_data(name, 0, ep->proc_fiber, &fops, &(fp->fiber_info));
+        //fp->fiber_proc_entry = proc_create_data(name, 0, ep->proc_fiber, &fops, &(fp->fiber_info));
 
 
         printk(KERN_DEBUG "[%s] created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
@@ -281,6 +279,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         prev_fiber->registers.sp = prev_regs->sp;
         prev_fiber->registers.bp = prev_regs->bp;
         prev_fiber->registers.ip = prev_regs->ip;
+        prev_fiber->registers.flags = prev_regs->flags;
 
         tp->selected_fiber->attached_thread = NULL;
 
@@ -313,6 +312,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         prev_regs->sp = f->registers.sp;
         prev_regs->bp = f->registers.bp;
         prev_regs->ip = f->registers.ip;
+        prev_regs->flags = f->registers.flags;
 
         tp->selected_fiber = f;
 
@@ -343,7 +343,7 @@ long do_FlsAlloc(unsigned long alloc_size, pid_t thread_id)
         struct fiber *f;
         int counter = 0;
         unsigned long index;
-        
+
         if (p == NULL)
                 return -1;
         t = find_thread_by_pid(thread_id, p);
@@ -370,7 +370,7 @@ long do_FlsFree(unsigned long index, pid_t thread_id)
         struct process *p = find_process_by_tgid(current->tgid);
         struct thread *t;
         struct fiber *f;
-        
+
         if (p == NULL)
                 return -1;
         t = find_thread_by_pid(thread_id, p);
@@ -398,7 +398,7 @@ long do_FlsGetValue(unsigned long index, unsigned long buffer, pid_t thread_id)
         struct process *p = find_process_by_tgid(current->tgid);
         struct thread *t;
         struct fiber *f;
-        
+
         if (p == NULL)
                 return -1;
         t = find_thread_by_pid(thread_id, p);
@@ -429,7 +429,7 @@ long do_FlsSetValue(unsigned long index, unsigned long value, pid_t thread_id)
         struct process *p = find_process_by_tgid(current->tgid);
         struct thread *t;
         struct fiber *f;
-        
+
         if (p == NULL)
                 return -1;
         t = find_thread_by_pid(thread_id, p);

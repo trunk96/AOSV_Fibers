@@ -86,7 +86,6 @@ struct process {
         struct hlist_node node;
         atomic_long_t last_fiber_id;
         atomic_long_t active_threads;
-        struct proc_dir_entry *proc_fiber;
         DECLARE_HASHTABLE(threads, 10);
         DECLARE_HASHTABLE(fibers, 10);
 };

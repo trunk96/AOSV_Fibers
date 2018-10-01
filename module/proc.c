@@ -132,25 +132,24 @@ int proc_fiber_base_readdir(struct file *file, struct dir_context *ctx){
 
 								unsigned long nents = atomic64_read(&(p->last_fiber_id));
 								printk(KERN_DEBUG "%s: proc received PID %d\n", KBUILD_MODNAME, p->process_id);
-								/*struct pid_entry fiber_base_stuff[nents];
+								struct pid_entry fiber_base_stuff[nents];
 								memset(fiber_base_stuff, 0, nents * sizeof(struct pid_entry));
-								int i;
+								int i, counter = 0;
 								struct fiber *fp;
 								hash_for_each_rcu(p->fibers, i, fp, node){
 																if (fp == NULL)
 																								break; //we should never be here
-																char name[64] = "";
-																snprintf(name, 64, "%d", fp->fiber_id);
 																//fiber_base_stuff[i] = REG(name, S_IRUGO, f_fops);
-																fiber_base_stuff[i].name = name;
-																fiber_base_stuff[i].len = sizeof(name) - 1;
-																fiber_base_stuff[i].mode = S_IFREG|S_IRUGO;
-																fiber_base_stuff[i].iop = NULL;
-																fiber_base_stuff[i].fop = &f_fops;
-								}*/
+																fiber_base_stuff[counter].name = fp->name;
+																fiber_base_stuff[counter].len = sizeof(fp->name) - 1;
+																fiber_base_stuff[counter].mode = S_IFREG|S_IRUGO;
+																fiber_base_stuff[counter].iop = NULL;
+																fiber_base_stuff[counter].fop = &f_fops;
+																counter++;
+								}
 
 								//here we have the array, so we can call again readdir to show them into /proc/{PID}/fibers
-								return readdir(file, ctx, p->fiber_base_stuff, nents);
+								return readdir(file, ctx, fiber_base_stuff, nents);
 								//return 0;
 }
 
@@ -186,25 +185,24 @@ struct dentry *proc_fiber_base_lookup(struct inode *dir, struct dentry *dentry, 
 																return 0;
 
 								unsigned long nents = atomic64_read(&(p->last_fiber_id));
-								/*struct pid_entry fiber_base_stuff[nents];
+								struct pid_entry fiber_base_stuff[nents];
 								memset(fiber_base_stuff, 0, nents * sizeof(struct pid_entry));
-								int i;
+								int i, counter = 0;
 								struct fiber *fp;
 								hash_for_each_rcu(p->fibers, i, fp, node){
 																if (fp == NULL)
 																								break;   //we should never be here
-																char name[64] = "";
-																snprintf(name, 64, "%d", fp->fiber_id);
 																//fiber_base_stuff[i] = REG(name, S_IRUGO, f_fops);
-																fiber_base_stuff[i].name = name;
-																fiber_base_stuff[i].len = sizeof(name) - 1;
-																fiber_base_stuff[i].mode = S_IFREG|S_IRUGO;
-																fiber_base_stuff[i].iop = NULL;
-																fiber_base_stuff[i].fop = &f_fops;
-								}*/
+																fiber_base_stuff[counter].name = fp->name;
+																fiber_base_stuff[counter].len = sizeof(fp->name) - 1;
+																fiber_base_stuff[counter].mode = S_IFREG|S_IRUGO;
+																fiber_base_stuff[counter].iop = NULL;
+																fiber_base_stuff[counter].fop = &f_fops;
+																counter++;
+								}
 
 								//here we have the array, so we can call again readdir to show them into /proc/{PID}/fibers
-								return look(dir, dentry, p->fiber_base_stuff, nents);
+								return look(dir, dentry, fiber_base_stuff, nents);
 }
 
 

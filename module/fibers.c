@@ -154,11 +154,11 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
 
 
         //snprintf(name, 256, "%d_%d",ep->process_id, fp->fiber_id);
-        ep->fiber_base_stuff[fp->fiber_id - 1].name = fp->name;
+        /*ep->fiber_base_stuff[fp->fiber_id - 1].name = fp->name;
         ep->fiber_base_stuff[fp->fiber_id - 1].len = sizeof(name) - 1;
         ep->fiber_base_stuff[fp->fiber_id - 1].mode = S_IFREG|S_IRUGO;
         ep->fiber_base_stuff[fp->fiber_id - 1].iop = NULL;
-        ep->fiber_base_stuff[fp->fiber_id - 1].fop = &f_fops;
+        ep->fiber_base_stuff[fp->fiber_id - 1].fop = &f_fops;*/
 
         //fp->fiber_proc_entry = proc_create_data(name, 0, NULL, &fops, &(fp->fiber_info));
         //fp->fiber_proc_entry = proc_create_data(name, 0, ep->proc_fiber, &fops, &(fp->fiber_info));
@@ -208,11 +208,11 @@ pid_t do_CreateFiber(void *stack_pointer, unsigned long stack_size, user_functio
 
         //snprintf(name, 256, "%d_%d",ep->process_id, fp->fiber_id);
         //fp->fiber_proc_entry = proc_create_data(name, 0, ep->proc_fiber, &fops, &(fp->fiber_info));
-        ep->fiber_base_stuff[fp->fiber_id - 1].name = fp->name;
+        /*ep->fiber_base_stuff[fp->fiber_id - 1].name = fp->name;
         ep->fiber_base_stuff[fp->fiber_id - 1].len = sizeof(name) - 1;
         ep->fiber_base_stuff[fp->fiber_id - 1].mode = S_IFREG|S_IRUGO;
         ep->fiber_base_stuff[fp->fiber_id - 1].iop = NULL;
-        ep->fiber_base_stuff[fp->fiber_id - 1].fop = &f_fops;
+        ep->fiber_base_stuff[fp->fiber_id - 1].fop = &f_fops;*/
 
 
         printk(KERN_DEBUG "[%s] created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);

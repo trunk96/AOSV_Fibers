@@ -104,7 +104,6 @@ struct process {
         atomic_long_t active_threads;
         DECLARE_HASHTABLE(threads, 10);
         DECLARE_HASHTABLE(fibers, 10);
-        struct pid_entry fiber_base_stuff[1024];
 };
 
 struct thread {

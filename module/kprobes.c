@@ -82,14 +82,15 @@ int proc_insert_dir(struct kretprobe_instance *k, struct pt_regs *regs)
 
 								//we have to insert "fibers" directory only in a fiberized process
 								struct tgid_dir_data *data = (struct tgid_dir_data *)(k->data);
-								unsigned long tgid;
+								//unsigned long tgid;
 								struct process *p;
 								unsigned long flags;
 								unsigned int pos;
-								if (kstrtoul(data->file->f_path.dentry->d_name.name, 10, &tgid))
-												return 0;
+								/*if (kstrtoul(data->file->f_path.dentry->d_name.name, 10, &tgid))
+												return 0;*/
+								struct task_struct * task = get_pid_task(proc_pid(file_inode(data->file)), PIDTYPE_PID);
 
-								p = find_process_by_tgid(tgid);
+								p = find_process_by_tgid(task->tgid);
 								if (p == NULL)
 												return 0;
 

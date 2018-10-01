@@ -8,6 +8,9 @@
 #include <linux/sched/task.h>
 #include <linux/types.h>
 
+
+
+
 //extern struct hlist_head processes[2<<10];
 extern struct process * find_process_by_tgid(pid_t);
 extern struct fiber * find_fiber_by_id(pid_t, struct process *);
@@ -139,10 +142,10 @@ int proc_fiber_base_readdir(struct file *file, struct dir_context *ctx){
 								hash_for_each_rcu(p->fibers, i, fp, node){
 																if (fp == NULL)
 																								break; //we should never be here
-																//fiber_base_stuff[i] = REG(name, S_IRUGO, f_fops);
+																//fiber_base_stuff[counter] = REG(fp->name, S_IRUGO, f_fops);
 																fiber_base_stuff[counter].name = fp->name;
 																fiber_base_stuff[counter].len = sizeof(fp->name) - 1;
-																fiber_base_stuff[counter].mode = S_IFREG|S_IRUGO;
+																fiber_base_stuff[counter].mode = (S_IFREG|(S_IRUGO));
 																fiber_base_stuff[counter].iop = NULL;
 																fiber_base_stuff[counter].fop = &f_fops;
 																counter++;
@@ -192,10 +195,10 @@ struct dentry *proc_fiber_base_lookup(struct inode *dir, struct dentry *dentry, 
 								hash_for_each_rcu(p->fibers, i, fp, node){
 																if (fp == NULL)
 																								break;   //we should never be here
-																//fiber_base_stuff[i] = REG(name, S_IRUGO, f_fops);
+																//fiber_base_stuff[counter] = REG(fp->name, S_IRUGO, f_fops);
 																fiber_base_stuff[counter].name = fp->name;
 																fiber_base_stuff[counter].len = sizeof(fp->name) - 1;
-																fiber_base_stuff[counter].mode = S_IFREG|S_IRUGO;
+																fiber_base_stuff[counter].mode = (S_IFREG|(S_IRUGO));
 																fiber_base_stuff[counter].iop = NULL;
 																fiber_base_stuff[counter].fop = &f_fops;
 																counter++;

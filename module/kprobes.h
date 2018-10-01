@@ -29,9 +29,34 @@ extern void proc_fiber_exit(struct process *);
 								NOD(NAME, (S_IFREG|(MODE)), NULL, &fops, {})
 
 
+struct proc_inode {
+								struct pid *pid;
+								unsigned int fd;
+								union proc_op op;
+								struct proc_dir_entry *pde;
+								struct ctl_table_header *sysctl;
+								struct ctl_table *sysctl_entry;
+								struct hlist_node sysctl_inodes;
+								const struct proc_ns_operations *ns_ops;
+								struct inode vfs_inode;
+};
+
+
+static inline struct proc_inode *PROC_I(const struct inode *inode)
+{
+								return container_of(inode, struct proc_inode, vfs_inode);
+}
+
+static inline struct pid *proc_pid(struct inode *inode)
+{
+								return PROC_I(inode)->pid;
+}
+
+
+
 struct file_operations file_ops = {
 								.read  = generic_read_dir,
-								.iterate_shared	= proc_fiber_base_readdir,
+								.iterate_shared = proc_fiber_base_readdir,
 								.llseek  = generic_file_llseek,
 };
 

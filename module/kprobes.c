@@ -168,7 +168,7 @@ int clear_thread_struct(struct kprobe * k, struct pt_regs * r)
 																																break;
 																								//here we have also to kfree the fls
 																								printk(KERN_DEBUG "%s: Time value for fiber %d is %lu\n", KBUILD_MODNAME, f->fiber_id, f->total_time);
-																								proc_remove(f->fiber_proc_entry);
+																								//proc_remove(f->fiber_proc_entry);
 																								kfree(f);
 																}
 																hash_del_rcu(&(p->node));

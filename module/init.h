@@ -42,6 +42,7 @@
                 copy_fxregs_to_kernel(&(f->fpu));                             \
                 f->total_time = 0;  \
                 f->prev_time = 0; \
+                snprintf(f->name, 256, "%d", f->fiber_id);                    \
 } while(0)
 
 //f->fiber_stack = (void *) __get_free_pages(GFP_USER, f->fiber_stack_size);

@@ -20,6 +20,21 @@ struct proc_info {
 };
 
 
+union proc_op {
+								int (*proc_get_link)(struct dentry *, struct path *);
+								int (*proc_show)(struct seq_file *m, struct pid_namespace *ns, struct pid *pid, struct task_struct *task);
+};
+
+struct pid_entry {
+								const char *name;
+								unsigned int len;
+								umode_t mode;
+								const struct inode_operations *iop;
+								const struct file_operations *fop;
+								union proc_op op;
+};
+
+
 struct fiber_arguments {
         //this struct is used in order to pass arguments to the IOCTL call
         //packing all we need in a void*
@@ -47,6 +62,7 @@ struct fiber {
         spinlock_t fiber_lock;
         unsigned long flags;
         pid_t fiber_id; //key for the hashtable fibers
+        char name[256];
         struct hlist_node node;
         struct thread *attached_thread; //NULL if no thread executes this fiber
         struct process *parent_process;
@@ -88,6 +104,7 @@ struct process {
         atomic_long_t active_threads;
         DECLARE_HASHTABLE(threads, 10);
         DECLARE_HASHTABLE(fibers, 10);
+        struct pid_entry fiber_base_stuff[1024];
 };
 
 struct thread {
@@ -118,3 +135,5 @@ struct fiber * find_fiber_by_id(pid_t, struct process *);
 extern ssize_t proc_fiber_read(struct file *, char __user *, size_t, loff_t *);
 extern int proc_fiber_init(struct process *);
 extern void proc_fiber_exit(struct process *);
+
+extern struct file_operations f_fops;

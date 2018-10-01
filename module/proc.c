@@ -18,19 +18,7 @@ typedef int (*proc_setattr_t)(struct dentry *dentry, struct iattr *attr);
 extern proc_setattr_t setattr;
 
 
-union proc_op {
-								int (*proc_get_link)(struct dentry *, struct path *);
-								int (*proc_show)(struct seq_file *m, struct pid_namespace *ns, struct pid *pid, struct task_struct *task);
-};
 
-struct pid_entry {
-								const char *name;
-								unsigned int len;
-								umode_t mode;
-								const struct inode_operations *iop;
-								const struct file_operations *fop;
-								union proc_op op;
-};
 
 
 struct proc_inode {
@@ -135,13 +123,16 @@ int proc_fiber_base_readdir(struct file *file, struct dir_context *ctx){
 
 								//printk(KERN_DEBUG "%s: proc received PID %d and FID %d\n", KBUILD_MODNAME, pinfo->process_id, pinfo->fiber_id);
 
+
+
 								p = find_process_by_tgid(task->tgid);
 
 								if (p == NULL)
 																return 0;
 
 								unsigned long nents = atomic64_read(&(p->last_fiber_id));
-								struct pid_entry fiber_base_stuff[nents];
+								printk(KERN_DEBUG "%s: proc received PID %d\n", KBUILD_MODNAME, p->process_id);
+								/*struct pid_entry fiber_base_stuff[nents];
 								memset(fiber_base_stuff, 0, nents * sizeof(struct pid_entry));
 								int i;
 								struct fiber *fp;
@@ -156,10 +147,11 @@ int proc_fiber_base_readdir(struct file *file, struct dir_context *ctx){
 																fiber_base_stuff[i].mode = S_IFREG|S_IRUGO;
 																fiber_base_stuff[i].iop = NULL;
 																fiber_base_stuff[i].fop = &f_fops;
-								}
+								}*/
 
 								//here we have the array, so we can call again readdir to show them into /proc/{PID}/fibers
-								return readdir(file, ctx, fiber_base_stuff, nents);
+								return readdir(file, ctx, p->fiber_base_stuff, nents);
+								//return 0;
 }
 
 
@@ -194,7 +186,7 @@ struct dentry *proc_fiber_base_lookup(struct inode *dir, struct dentry *dentry, 
 																return 0;
 
 								unsigned long nents = atomic64_read(&(p->last_fiber_id));
-								struct pid_entry fiber_base_stuff[nents];
+								/*struct pid_entry fiber_base_stuff[nents];
 								memset(fiber_base_stuff, 0, nents * sizeof(struct pid_entry));
 								int i;
 								struct fiber *fp;
@@ -209,10 +201,10 @@ struct dentry *proc_fiber_base_lookup(struct inode *dir, struct dentry *dentry, 
 																fiber_base_stuff[i].mode = S_IFREG|S_IRUGO;
 																fiber_base_stuff[i].iop = NULL;
 																fiber_base_stuff[i].fop = &f_fops;
-								}
+								}*/
 
 								//here we have the array, so we can call again readdir to show them into /proc/{PID}/fibers
-								return look(dir, dentry, fiber_base_stuff, nents);
+								return look(dir, dentry, p->fiber_base_stuff, nents);
 }
 
 

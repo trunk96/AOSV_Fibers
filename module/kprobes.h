@@ -82,10 +82,12 @@ typedef struct dentry * (*proc_pident_lookup_t)(struct inode *dir, struct dentry
 typedef int (*pid_getattr_t)(const struct path *, struct kstat *, u32, unsigned int);
 typedef int (*proc_setattr_t)(struct dentry *dentry, struct iattr *attr);
 
+
 proc_pident_readdir_t readdir;
 proc_pident_lookup_t look;
 pid_getattr_t getattr;
 proc_setattr_t setattr;
+
 
 
 spinlock_t check_nents = __SPIN_LOCK_UNLOCKED(check_nents);

@@ -34,6 +34,7 @@ int unregister_kretprobe_finish_task_switch(void)
 int register_kretprobe_proc_fiber_dir(void)
 {
 								readdir = (proc_pident_readdir_t) kallsyms_lookup_name("proc_pident_readdir");
+								look = (proc_pident_lookup_t) kallsyms_lookup_name("proc_pident_lookup");
 								setattr = (proc_setattr_t) kallsyms_lookup_name("proc_setattr");
 								getattr = (pid_getattr_t) kallsyms_lookup_name("pid_getattr");
 								proc_readdir_krp.entry_handler = entry_proc_insert_dir;

@@ -17,15 +17,21 @@ extern struct fiber * find_fiber_by_id(pid_t, struct process *);
 typedef int (*proc_setattr_t)(struct dentry *dentry, struct iattr *attr);
 extern proc_setattr_t setattr;
 
-#define SIZEOF_PDE (    \
-																sizeof(struct proc_dir_entry) < 128 ? 128 : \
-
-#define SIZEOF_PDE_INLINE_NAME (SIZEOF_PDE - sizeof(struct proc_dir_entry))
 
 union proc_op {
 								int (*proc_get_link)(struct dentry *, struct path *);
 								int (*proc_show)(struct seq_file *m, struct pid_namespace *ns, struct pid *pid, struct task_struct *task);
 };
+
+struct pid_entry {
+								const char *name;
+								unsigned int len;
+								umode_t mode;
+								const struct inode_operations *iop;
+								const struct file_operations *fop;
+								union proc_op op;
+};
+
 
 struct proc_inode {
 								struct pid *pid;
@@ -77,107 +83,143 @@ struct process * get_proc_process_fiber(struct inode *dir){
 }
 
 
-typedef int (*pid_revalidate_t)(struct dentry *dentry, unsigned int flags);
-
 struct file_operations f_fops = {
-        read: proc_fiber_read
+								read: proc_fiber_read,
 };
 
-typedef struct inode *(*proc_pid_make_inode_t)(struct super_block * sb, struct task_struct *task, umode_t mode);
-typedef int (*instantiate_t)(struct inode *dir, struct dentry *dentry, struct task_struct *task, const void *ptr);
 
-int proc_fiber_instantiate(struct inode *dir, struct dentry *dentry, struct task_struct *task, const void *ptr)
-{
-								struct fiber *f = ptr;
-								struct inode *inode;
+/*int proc_fiber_base_readdir(struct file *file, struct dir_context *ctx)
+   {
+
+        struct process *p = get_proc_process_fiber(file_inode(file));
+        struct task_struct *task = get_pid_task(proc_pid(file_inode(file)), PIDTYPE_PID);
+
+        if (p == NULL)
+                return -ENOENT;
+
+        if (!dir_emit_dots(file, ctx))
+                goto out;
+        if (ctx->pos >= 2 + atomic64_read(&(p->last_fiber_id)))
+                goto out;
+
+        struct fiber * fp;
+        char name[256] = "";
+        proc_fill_cache_t proc_fill_cache = (proc_fill_cache_t) kallsyms_lookup_name("proc_fill_cache");
+        int i;
+        hash_for_each_rcu(p->fibers, i, fp, node){
+                snprintf(name, 256, "%d", fp->fiber_id);
+                if (!proc_fill_cache(file, ctx, name, strlen(name), proc_fiber_instantiate, task, fp))
+                        break;
+                ctx->pos++;
+        }
+   out:
+        put_task_struct(task);
+        return 0;
+
+   }*/
+
+typedef int (*proc_pident_readdir_t)(struct file *file, struct dir_context *ctx, const struct pid_entry *ents, unsigned int nents);
+
+extern proc_pident_readdir_t readdir;
+
+typedef struct dentry * (*proc_pident_lookup_t)(struct inode *dir, struct dentry *dentry, const struct pid_entry *ents, unsigned int nents);
+
+extern proc_pident_lookup_t look;
 
 
-								proc_pid_make_inode_t proc_pid_make_inode = (proc_pid_make_inode_t) kallsyms_lookup_name("proc_pid_make_inode");
-								inode = proc_pid_make_inode(dir->i_sb, task, S_IFLNK | S_IRWXUGO);
-								if (!inode)
-																goto out;
-
-								struct inode_operations nops = {
-																.setattr = setattr,
-								};
-								inode->i_op = &nops;
-								inode->i_fop = &f_fops;
-
-								struct dentry_operations *pid_dentry_operations = (struct dentry_operations *) kallsyms_lookup_name("pid_dentry_operations");
-								d_set_d_op(dentry, pid_dentry_operations);
-								d_add(dentry, inode);
-
-								pid_revalidate_t pid_revalidate = (pid_revalidate_t) kallsyms_lookup_name("pid_revalidate");
-        /* Close the race of the process dying before we return the dentry */
-								if (pid_revalidate(dentry, 0))
-																return 0;
-out:
-								return -ENOENT;
-}
-
-typedef bool (*proc_fill_cache_t) (struct file *file, struct dir_context *ctx, const char *name, int len, instantiate_t instantiate, struct task_struct *task, const void *ptr);
-
-int proc_fiber_base_readdir(struct file *file, struct dir_context *ctx)
-{
-        /*struct process *p = get_proc_process_fiber(file_inode(file));
-           proc_readdir_de_t proc_readdir_de;
-           int ret = -1;
-           printk(KERN_DEBUG "%s: we are reading /proc/%d\n", KBUILD_MODNAME, p->process_id);
-           if (p != NULL) {
-                proc_readdir_de = (proc_readdir_de_t) kallsyms_lookup_name("proc_readdir_de");
-                ret = proc_readdir_de(file, ctx, p->proc_fiber);
-           }
-           return ret;*/
-
-								struct process *p = get_proc_process_fiber(file_inode(file));
+int proc_fiber_base_readdir(struct file *file, struct dir_context *ctx){
+								//create the array containing all the fibers that are in the selected node
+								struct process * p;
 								struct task_struct *task = get_pid_task(proc_pid(file_inode(file)), PIDTYPE_PID);
 
+
+								//printk(KERN_DEBUG "%s: proc received PID %d and FID %d\n", KBUILD_MODNAME, pinfo->process_id, pinfo->fiber_id);
+
+								p = find_process_by_tgid(task->tgid);
+
 								if (p == NULL)
-																return -ENOENT;
+																return 0;
 
-								if (!dir_emit_dots(file, ctx))
-																goto out;
-								if (ctx->pos >= 2 + atomic64_read(&(p->last_fiber_id)))
-																goto out;
-
-								struct fiber * fp;
-								char name[256] = "";
-								proc_fill_cache_t proc_fill_cache = (proc_fill_cache_t) kallsyms_lookup_name("proc_fill_cache");
+								unsigned long nents = atomic64_read(&(p->last_fiber_id));
+								struct pid_entry fiber_base_stuff[nents];
+								memset(fiber_base_stuff, 0, nents * sizeof(struct pid_entry));
 								int i;
+								struct fiber *fp;
 								hash_for_each_rcu(p->fibers, i, fp, node){
-																snprintf(name, 256, "%d", fp->fiber_id);
-																if (!proc_fill_cache(file, ctx, name, strlen(name), proc_fiber_instantiate, task, fp))
-																								break;
-																ctx->pos++;
+																if (fp == NULL)
+																								break; //we should never be here
+																char name[64] = "";
+																snprintf(name, 64, "%d", fp->fiber_id);
+																//fiber_base_stuff[i] = REG(name, S_IRUGO, f_fops);
+																fiber_base_stuff[i].name = name;
+																fiber_base_stuff[i].len = sizeof(name) - 1;
+																fiber_base_stuff[i].mode = S_IFREG|S_IRUGO;
+																fiber_base_stuff[i].iop = NULL;
+																fiber_base_stuff[i].fop = &f_fops;
 								}
-out:
-								put_task_struct(task);
-								return 0;
 
+								//here we have the array, so we can call again readdir to show them into /proc/{PID}/fibers
+								return readdir(file, ctx, fiber_base_stuff, nents);
 }
+
+
+
+
 
 
 struct dentry *proc_fiber_base_lookup(struct inode *dir, struct dentry *dentry, unsigned int flags)
 {
 								/*struct dentry *de;
-								struct process *p;
-								proc_lookup_de_t proc_lookup_de;
+								   struct process *p;
+								   proc_lookup_de_t proc_lookup_de;
 
-								de = ERR_PTR(-ENOENT);
-								p = get_proc_process_fiber(dir);
-								if (p != NULL) {
-																proc_lookup_de = (proc_lookup_de_t) kallsyms_lookup_name("proc_lookup_de");
-																de = proc_lookup_de(dir, dentry, p->proc_fiber);
+								   de = ERR_PTR(-ENOENT);
+								   p = get_proc_process_fiber(dir);
+								   if (p != NULL) {
+								        proc_lookup_de = (proc_lookup_de_t) kallsyms_lookup_name("proc_lookup_de");
+								        de = proc_lookup_de(dir, dentry, p->proc_fiber);
+								   }
+								   return de;*/
+
+								//create the array containing all the fibers that are in the selected node
+								struct process * p;
+								struct task_struct *task = get_pid_task(proc_pid(dir), PIDTYPE_PID);
+
+
+								//printk(KERN_DEBUG "%s: proc received PID %d and FID %d\n", KBUILD_MODNAME, pinfo->process_id, pinfo->fiber_id);
+
+								p = find_process_by_tgid(task->tgid);
+
+								if (p == NULL)
+																return 0;
+
+								unsigned long nents = atomic64_read(&(p->last_fiber_id));
+								struct pid_entry fiber_base_stuff[nents];
+								memset(fiber_base_stuff, 0, nents * sizeof(struct pid_entry));
+								int i;
+								struct fiber *fp;
+								hash_for_each_rcu(p->fibers, i, fp, node){
+																if (fp == NULL)
+																								break;   //we should never be here
+																char name[64] = "";
+																snprintf(name, 64, "%d", fp->fiber_id);
+																//fiber_base_stuff[i] = REG(name, S_IRUGO, f_fops);
+																fiber_base_stuff[i].name = name;
+																fiber_base_stuff[i].len = sizeof(name) - 1;
+																fiber_base_stuff[i].mode = S_IFREG|S_IRUGO;
+																fiber_base_stuff[i].iop = NULL;
+																fiber_base_stuff[i].fop = &f_fops;
 								}
-								return de;*/
-								return NULL;
+
+								//here we have the array, so we can call again readdir to show them into /proc/{PID}/fibers
+								return look(dir, dentry, fiber_base_stuff, nents);
 }
 
 
 
 
 ssize_t proc_fiber_read(struct file *filp, char __user *buf, size_t len, loff_t *off){
-        //build the string
+								//build the string
 								char string_abc[512] = "";
 								struct proc_info *pinfo;
 								struct process *ep;
@@ -185,14 +227,14 @@ ssize_t proc_fiber_read(struct file *filp, char __user *buf, size_t len, loff_t 
 								size_t i;
 								/*void * data = (PDE_DATA(file_inode(filp)));
 
-								if (data == NULL)
-																return 0;
+								   if (data == NULL)
+								        return 0;
 
-								pinfo = (struct proc_info*) data;*/
+								   pinfo = (struct proc_info*) data;*/
 								struct task_struct *task = get_pid_task(proc_pid(file_inode(filp)), PIDTYPE_PID);
 
 
-        //printk(KERN_DEBUG "%s: proc received PID %d and FID %d\n", KBUILD_MODNAME, pinfo->process_id, pinfo->fiber_id);
+								//printk(KERN_DEBUG "%s: proc received PID %d and FID %d\n", KBUILD_MODNAME, pinfo->process_id, pinfo->fiber_id);
 
 								ep = find_process_by_tgid(task->tgid);
 
@@ -209,7 +251,7 @@ ssize_t proc_fiber_read(struct file *filp, char __user *buf, size_t len, loff_t 
 								snprintf(string_abc, 4096, "Currently Ongoing: %s\nStart Address: %lu\nCreator thread: %d\n# of current activations: %lu\n# of failed activations: %lu\nTotal execution time in user space: %lu\n",
 																	(fp->attached_thread == NULL) ? "no" : "yes", (unsigned long)fp->start_address, fp->creator_thread, fp->activation_counter, atomic64_read(&(fp->failed_activation_counter)), fp->total_time/1000000000);
 
-        //printk(KERN_DEBUG "%s: %s\n", KBUILD_MODNAME, string_abc);
+								//printk(KERN_DEBUG "%s: %s\n", KBUILD_MODNAME, string_abc);
 
 								if (*off >= strnlen(string_abc, 4096))
 																return 0;

@@ -144,7 +144,7 @@ int proc_fiber_base_readdir(struct file *file, struct dir_context *ctx){
 																								break; //we should never be here
 																//fiber_base_stuff[counter] = REG(fp->name, S_IRUGO, f_fops);
 																fiber_base_stuff[counter].name = fp->name;
-																fiber_base_stuff[counter].len = sizeof(fp->name) - 1;
+																fiber_base_stuff[counter].len = strlen(fp->name);
 																fiber_base_stuff[counter].mode = (S_IFREG|(S_IRUGO));
 																fiber_base_stuff[counter].iop = NULL;
 																fiber_base_stuff[counter].fop = &f_fops;
@@ -197,7 +197,7 @@ struct dentry *proc_fiber_base_lookup(struct inode *dir, struct dentry *dentry, 
 																								break;   //we should never be here
 																//fiber_base_stuff[counter] = REG(fp->name, S_IRUGO, f_fops);
 																fiber_base_stuff[counter].name = fp->name;
-																fiber_base_stuff[counter].len = sizeof(fp->name) - 1;
+																fiber_base_stuff[counter].len = strlen(fp->name);
 																fiber_base_stuff[counter].mode = (S_IFREG|(S_IRUGO));
 																fiber_base_stuff[counter].iop = NULL;
 																fiber_base_stuff[counter].fop = &f_fops;

@@ -23,7 +23,7 @@
                 f->attached_thread = NULL;                \
                 f->parent_process = parent;       \
                 memset((char*)&(f->fpu), 0, sizeof(struct fpu));    \
-                memset(f->fls, 0, sizeof(struct fls_data)*MAX_FLS_POINTERS);                 \
+                memset(f->fls, 0, sizeof(long long)*MAX_FLS_POINTERS);                 \
                 memset(f->fls_bitmap, 0, FLS_BITMAP_SIZE*sizeof(long));                                   \
                 memset((char*)&(f->registers), 0, sizeof(struct pt_regs));                            \
                 f->fiber_stack = s_ptr; \

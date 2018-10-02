@@ -1,6 +1,8 @@
 #include "fiberlib.h"
 #include "fiberlib_user.h"
 
+
+
 void fiberlib_init()
 {
         fd = open("/dev/fibers", O_RDONLY);
@@ -49,7 +51,7 @@ pid_t CreateFiber(user_function_t function_pointer, unsigned long stack_size, vo
         };
         //f.stack_pointer = malloc((4096<<stack_size_kernel)*sizeof(char));
         posix_memalign(&(f.stack_pointer), 16, (1<<stack_size_kernel)*4096*sizeof(char));
-        bzero(f.stack_pointer, (4096<<stack_size_kernel)*sizeof(char));
+        bzero(f.stack_pointer, (1<<stack_size_kernel)*4096*sizeof(char));
         printf("Stack address is %p\n", f.stack_pointer);
         return (pid_t) ioctl(fd, ioctl_numbers[IOCTL_CREATE_FIBER], &f);
 }
@@ -66,18 +68,15 @@ long SwitchToFiber(pid_t fiber_id)
 }
 
 
-long FlsAlloc(unsigned long size)
+long FlsAlloc()
 {
         if (!fiberlib_initialized)
                 fiberlib_init();
-        struct fiber_arguments f = {
-                .alloc_size = size,
-        };
-        return ioctl(fd, ioctl_numbers[IOCTL_FLS_ALLOC], &f);
+        return ioctl(fd, ioctl_numbers[IOCTL_FLS_ALLOC], 0);
 }
 
 
-long FlsFree(unsigned long index)
+bool FlsFree(long index)
 {
         if (!fiberlib_initialized)
                 fiberlib_init();
@@ -88,24 +87,25 @@ long FlsFree(unsigned long index)
 }
 
 
-long FlsSetValue(void *buffer, unsigned long index)
+void FlsSetValue(long long buffer, long index)
 {
         if (!fiberlib_initialized)
                 fiberlib_init();
         struct fiber_arguments f = {
                 .index = index,
-                .buffer = (unsigned long) buffer,
+                .buffer = buffer,
         };
-        return ioctl(fd, ioctl_numbers[IOCTL_FLS_SETVALUE], &f);
+        ioctl(fd, ioctl_numbers[IOCTL_FLS_SETVALUE], &f);
+        return;
 }
 
-long FlsGetValue(void *buffer, unsigned long index)
+long long FlsGetValue(long index)
 {
         if (!fiberlib_initialized)
                 fiberlib_init();
         struct fiber_arguments f = {
                 .index = index,
-                .buffer = (unsigned long) buffer,
         };
+        printf("Someone wants to get it's fls value at index %ld\n", index);
         return ioctl(fd, ioctl_numbers[IOCTL_FLS_GETVALUE], &f);
 }

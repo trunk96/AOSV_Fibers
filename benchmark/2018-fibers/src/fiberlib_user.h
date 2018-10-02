@@ -1,11 +1,13 @@
 #include <unistd.h>
+#include <stdbool.h>
 
 typedef void (*user_function_t)(void* param);
 
-void* ConvertThreadToFiber();
-void* CreateFiber(void (*entry_point)(void *), unsigned long, void *);
-void SwitchToFiber(void*);
-long FlsAlloc(void);
-long FlsFree(unsigned long);
-long long FlsGetValue(unsigned long);
-void FlsSetValue(long long, unsigned long);
+
+pid_t ConvertThreadToFiber();
+pid_t CreateFiber(user_function_t, unsigned long, void *);
+long SwitchToFiber(pid_t);
+long FlsAlloc();
+bool FlsFree(long);
+long long FlsGetValue(long);
+void FlsSetValue(long long, long);

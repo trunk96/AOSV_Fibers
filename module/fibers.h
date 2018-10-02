@@ -43,16 +43,15 @@ struct fiber_arguments {
         user_function_t start_function_address;
         void *start_function_arguments;
         pid_t fiber_id;
-        unsigned long index;
-        unsigned long buffer; //used both to get an element and to set an element
-        unsigned long alloc_size;
+        long index;
+        long long buffer; //used both to get an element and to set an element
 };
 
 
-struct fls_data {
+/*struct fls_data {
         void *fls_data;
         unsigned long size; //in bytes;
-};
+};*/
 
 
 struct fiber {
@@ -77,7 +76,7 @@ struct fiber {
         void *fiber_stack;
         unsigned long fiber_stack_size;
 
-        struct fls_data fls[MAX_FLS_POINTERS];
+        long long fls[MAX_FLS_POINTERS];
         unsigned long fls_bitmap[FLS_BITMAP_SIZE];
 
         //some statistics...
@@ -87,7 +86,6 @@ struct fiber {
         atomic_long_t failed_activation_counter;
         unsigned long prev_time;
         unsigned long total_time;
-        struct proc_dir_entry *fiber_proc_entry;
         struct proc_info fiber_info;
 
 };
@@ -119,10 +117,10 @@ struct thread {
 pid_t do_ConvertThreadToFiber(pid_t);
 pid_t do_CreateFiber(void *, unsigned long, user_function_t, void *, pid_t);
 long do_SwitchToFiber(pid_t, pid_t);
-long do_FlsAlloc(unsigned long, pid_t);
-long do_FlsFree(unsigned long, pid_t);
-long do_FlsGetValue(unsigned long, unsigned long, pid_t);
-long do_FlsSetValue(unsigned long, unsigned long, pid_t);
+long do_FlsAlloc(pid_t);
+bool do_FlsFree(long, pid_t);
+long long do_FlsGetValue(long, pid_t);
+void do_FlsSetValue(long, long long, pid_t);
 
 
 struct process * find_process_by_tgid(pid_t);

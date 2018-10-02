@@ -7,7 +7,7 @@ SRC = 	src/calqueue.c \
 		src/thread.c \
 		src/ult.c \
 		src/fiberlib.c
-		
+
 CFLAGS = -O3
 EXEC = test
 OBJS := $(SRC:%.c=%.o)
@@ -17,7 +17,7 @@ LIBS = -lm -lpthread
 all: $(EXEC)
 
 $(EXEC): $(OBJS)
-	$(CC) $(OBJS) $(LIBS) -o $(EXEC)
+	$(CC) $(OBJS) $(LIBS) -o $(EXEC) -g
 
 %.o : %.S
 	$(CC) $< $(LIBS) -c -o $@

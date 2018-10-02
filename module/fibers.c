@@ -163,7 +163,7 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
         //fp->fiber_proc_entry = proc_create_data(name, 0, NULL, &fops, &(fp->fiber_info));
         //fp->fiber_proc_entry = proc_create_data(name, 0, ep->proc_fiber, &fops, &(fp->fiber_info));
 
-        printk(KERN_DEBUG "[%s] created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
+        printk(KERN_DEBUG "%s: created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
         return fp->fiber_id;
 }
 
@@ -215,7 +215,7 @@ pid_t do_CreateFiber(void *stack_pointer, unsigned long stack_size, user_functio
         ep->fiber_base_stuff[fp->fiber_id - 1].fop = &f_fops;*/
 
 
-        printk(KERN_DEBUG "[%s] created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
+        printk(KERN_DEBUG "%s: created a fiber with fiber id %d in process with PID %d\n", KBUILD_MODNAME, fp->fiber_id, fp->parent_process->process_id);
         return fp->fiber_id;
 }
 
@@ -342,18 +342,18 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
 	      copy_kernel_to_fpregs(&(next_fpu->state));*/
 
         preempt_enable();
-        printk(KERN_DEBUG "[%s] Successfully switched to fiber %d\n", KBUILD_MODNAME, f->fiber_id);
+        printk(KERN_DEBUG "%s: Successfully switched from fiber %d to fiber %d\n", KBUILD_MODNAME, prev_fiber->fiber_id, f->fiber_id);
 
         return 0;
 }
 
-long do_FlsAlloc(unsigned long alloc_size, pid_t thread_id)
+long do_FlsAlloc(pid_t thread_id)
 {
         struct process *p = find_process_by_tgid(current->tgid);
         struct thread *t;
         struct fiber *f;
         int counter = 0;
-        unsigned long index;
+        long index;
 
         if (p == NULL)
                 return -1;
@@ -370,41 +370,36 @@ long do_FlsAlloc(unsigned long alloc_size, pid_t thread_id)
         //there is room for an allocation
         index = find_first_zero_bit(f->fls_bitmap, FLS_BITMAP_SIZE*sizeof(unsigned long)*64);
         change_bit(index, f->fls_bitmap);
-        f->fls[index].fls_data = kmalloc(alloc_size*sizeof(char), GFP_USER);
-        f->fls[index].size = alloc_size;
-        printk(KERN_DEBUG "[%s] Index for PID %d is %ld\n", KBUILD_MODNAME, p->process_id, index);
+        printk(KERN_DEBUG "%s: FlsAlloc gives index %ld to fiber %d\n", KBUILD_MODNAME, index, f->fiber_id);
         return index;
 }
 
-long do_FlsFree(unsigned long index, pid_t thread_id)
+bool do_FlsFree(long index, pid_t thread_id)
 {
         struct process *p = find_process_by_tgid(current->tgid);
         struct thread *t;
         struct fiber *f;
 
         if (p == NULL)
-                return -1;
+                return false;
         t = find_thread_by_pid(thread_id, p);
         if (t == NULL || t->selected_fiber == NULL)
-                return -1;
+                return false;
         f = t->selected_fiber;
 
         if (index >= MAX_FLS_POINTERS || index < 0)
-                return -1;
+                return false;
 
         if(test_bit(index, f->fls_bitmap) == 0)
-                return -1;
-
-        kfree(f->fls[index].fls_data);
-        f->fls[index].size = 0;
+                return false;
 
         change_bit(index, f->fls_bitmap);
 
-        printk(KERN_DEBUG "[%s] Freed index %ld for PID %d\n", KBUILD_MODNAME, index, p->process_id);
-        return 0;
+        printk(KERN_DEBUG "%s: Freed index %ld for fiber %d\n", KBUILD_MODNAME, index, f->fiber_id);
+        return true;
 }
 
-long do_FlsGetValue(unsigned long index, unsigned long buffer, pid_t thread_id)
+long long do_FlsGetValue(long index, pid_t thread_id)
 {
         struct process *p = find_process_by_tgid(current->tgid);
         struct thread *t;
@@ -423,45 +418,33 @@ long do_FlsGetValue(unsigned long index, unsigned long buffer, pid_t thread_id)
         if(test_bit(index, f->fls_bitmap) == 0)
                 return -1;
 
-        if (!access_ok(VERIFY_WRITE, buffer, f->fls[index].size * sizeof(char))) {
-                return -EFAULT;
-        }
-        if (copy_to_user((void*)buffer, f->fls[index].fls_data, f->fls[index].size)) {
-                return -EFAULT;
-        }
+        printk(KERN_DEBUG "%s: FlsGetValue returns a value to fiber %d\n", KBUILD_MODNAME, f->fiber_id);
 
-        printk(KERN_DEBUG "[%s] Returning a value to PID %d\n", KBUILD_MODNAME, p->process_id);
-
-        return f->fls[index].size;
+        return f->fls[index];
 }
 
-long do_FlsSetValue(unsigned long index, unsigned long value, pid_t thread_id)
+void do_FlsSetValue(long index, long long value, pid_t thread_id)
 {
         struct process *p = find_process_by_tgid(current->tgid);
         struct thread *t;
         struct fiber *f;
 
         if (p == NULL)
-                return -1;
+                return;
         t = find_thread_by_pid(thread_id, p);
         if (t == NULL || t->selected_fiber == NULL)
-                return -1;
+                return;
         f = t->selected_fiber;
-        printk(KERN_DEBUG "[%s] Index given from PID %d is %ld\n", KBUILD_MODNAME, p->process_id, index);
+        //printk(KERN_DEBUG "%s: Index given from PID %d is %ld\n", KBUILD_MODNAME, p->process_id, index);
 
         if (index >= MAX_FLS_POINTERS || index < 0)
-                return -1;
+                return;
 
         if(test_bit(index, f->fls_bitmap) == 0)
-                return -1;
+                return;
 
-        if (!access_ok(VERIFY_READ, value, f->fls[index].size * sizeof(char))) {
-                return -EFAULT;
-        }
-        if (copy_from_user(f->fls[index].fls_data, (void*)value, f->fls[index].size*sizeof(char))) {
-                return -EFAULT;
-        }
+        f->fls[index] = value;
 
-        printk(KERN_DEBUG "[%s] Received value from PID %d\n", KBUILD_MODNAME, p->process_id);
-        return 0;
+        printk(KERN_DEBUG "%s: Received value from fiber %d to index %ld\n", KBUILD_MODNAME, f->fiber_id, index);
+        return;
 }

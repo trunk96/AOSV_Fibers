@@ -51,16 +51,7 @@ static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
                 return do_SwitchToFiber(fa.fiber_id, thread_id);
         }
         else if (cmd == IOCTL_FLS_ALLOC) {
-                struct fiber_arguments fa;
-                if (!access_ok(VERIFY_READ, arg, sizeof(struct fiber_arguments))) {
-                        return -EFAULT;
-                }
-                if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
-                        return -EFAULT;
-                }
-                if (fa.alloc_size < 0)
-                        return -EFAULT;
-                return do_FlsAlloc(fa.alloc_size, thread_id);
+                return (long) do_FlsAlloc(thread_id);
         }
         else if (cmd == IOCTL_FLS_FREE) {
                 struct fiber_arguments fa;
@@ -70,7 +61,7 @@ static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
                 if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
                         return -EFAULT;
                 }
-                return do_FlsFree(fa.index, thread_id);
+                return (long) do_FlsFree(fa.index, thread_id);
         }
         else if (cmd == IOCTL_FLS_GETVALUE) {
                 struct fiber_arguments fa;
@@ -80,7 +71,7 @@ static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
                 if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
                         return -EFAULT;
                 }
-                return (long) do_FlsGetValue(fa.index, fa.buffer, thread_id);
+                return (long) do_FlsGetValue(fa.index, thread_id);
         }
         else if (cmd == IOCTL_FLS_SETVALUE) {
                 struct fiber_arguments fa;
@@ -90,7 +81,8 @@ static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
                 if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
                         return -EFAULT;
                 }
-                return do_FlsSetValue(fa.index, fa.buffer, thread_id);
+                do_FlsSetValue(fa.index, fa.buffer, thread_id);
+                return 0;
         }
         else {
                 return -EINVAL;

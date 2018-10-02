@@ -6,11 +6,11 @@
 void function (void* parameters)
 {
         printf("Starting function...\n");
-        unsigned long index = FlsAlloc(sizeof(long));
-        char a = 'a';
-        FlsSetValue(&a, index);
-        char b;
-        FlsGetValue(&b, index);
+        long index = FlsAlloc();
+        long long l1 = 123456;
+        FlsSetValue(l1, index);
+        long long l2;
+        l2 = FlsGetValue(index);
         /*printf("Parameters is %c and value is %c\n", *((char*)parameters), b);
         FlsFree(index);*/
         long counter = 0;

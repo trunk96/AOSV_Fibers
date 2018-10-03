@@ -52,7 +52,7 @@ pid_t CreateFiber(user_function_t function_pointer, unsigned long stack_size, vo
         //f.stack_pointer = malloc((4096<<stack_size_kernel)*sizeof(char));
         posix_memalign(&(f.stack_pointer), 16, (1<<stack_size_kernel)*4096*sizeof(char));
         bzero(f.stack_pointer, (1<<stack_size_kernel)*4096*sizeof(char));
-        printf("Stack address is %p\n", f.stack_pointer);
+        //printf("Stack address is %p\n", f.stack_pointer);
         return (pid_t) ioctl(fd, ioctl_numbers[IOCTL_CREATE_FIBER], &f);
 }
 
@@ -106,6 +106,6 @@ long long FlsGetValue(long index)
         struct fiber_arguments f = {
                 .index = index,
         };
-        printf("Someone wants to get it's fls value at index %ld\n", index);
+        //printf("Someone wants to get it's fls value at index %ld\n", index);
         return ioctl(fd, ioctl_numbers[IOCTL_FLS_GETVALUE], &f);
 }

@@ -41,17 +41,17 @@ pid_t CreateFiber(user_function_t function_pointer, unsigned long stack_size, vo
         if (!fiberlib_initialized)
                 fiberlib_init();
         //stack_size is espressed in pages but the kernel wants an order
-        int stack_size_kernel = log2_64(stack_size);
+        /*int stack_size_kernel = log2_64(stack_size);
         if (2<<stack_size_kernel != stack_size)
-                stack_size_kernel++;
+                stack_size_kernel++;*/
         struct fiber_arguments f = {
-                .stack_size = stack_size_kernel,
+                .stack_size = stack_size,
                 .start_function_address = function_pointer,
                 .start_function_arguments = parameters,
         };
         //f.stack_pointer = malloc((4096<<stack_size_kernel)*sizeof(char));
-        posix_memalign(&(f.stack_pointer), 16, (1<<stack_size_kernel)*4096*sizeof(char));
-        bzero(f.stack_pointer, (1<<stack_size_kernel)*4096*sizeof(char));
+        posix_memalign(&(f.stack_pointer), 16, stack_size);
+        bzero(f.stack_pointer, stack_size);
         //printf("Stack address is %p\n", f.stack_pointer);
         return (pid_t) ioctl(fd, ioctl_numbers[IOCTL_CREATE_FIBER], &f);
 }

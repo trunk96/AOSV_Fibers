@@ -2,7 +2,6 @@
 #include "init.h"
 #include <linux/kernel.h>
 #include <linux/sched.h>
-#include <linux/bitmap.h>
 #include <linux/proc_fs.h>
 
 
@@ -256,7 +255,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         f->attached_thread = tp;
         f->activation_counter++;
         //end of critical section
-        spin_unlock_irqrestore(&(f->fiber_lock), flags);
+
         //printk(KERN_DEBUG "%s exited from critical section\n", KBUILD_MODNAME);
 
 
@@ -267,7 +266,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         f->prev_time = current->utime;
 
         //kernel_fpu_begin();
-        preempt_disable();
+        //preempt_disable();
 
         prev_regs = task_pt_regs(current);
 
@@ -341,7 +340,8 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         /*fpregs_activate(next_fpu);
 	      copy_kernel_to_fpregs(&(next_fpu->state));*/
 
-        preempt_enable();
+        //preempt_enable();
+        spin_unlock_irqrestore(&(f->fiber_lock), flags);
         printk(KERN_DEBUG "%s: Successfully switched from fiber %d to fiber %d\n", KBUILD_MODNAME, prev_fiber->fiber_id, f->fiber_id);
 
         return 0;
@@ -361,14 +361,15 @@ long do_FlsAlloc(pid_t thread_id)
         if (t == NULL || t->selected_fiber == NULL)
                 return -1;
         f = t->selected_fiber;
-        while(counter < FLS_BITMAP_SIZE && (long)f->fls_bitmap[counter] == -1) {
-                counter++;
-        }
-        if (counter >= FLS_BITMAP_SIZE)
-                return -1;
 
         //there is room for an allocation
-        index = find_first_zero_bit(f->fls_bitmap, FLS_BITMAP_SIZE*sizeof(unsigned long)*64);
+        index = find_first_zero_bit(f->fls_bitmap, MAX_FLS_POINTERS);
+        if (index == MAX_FLS_POINTERS)
+        {
+          printk(KERN_DEBUG "%s: FlsAlloc has no index free for fiber %d\n", KBUILD_MODNAME, f->fiber_id);
+          return -1;
+        }
+
         change_bit(index, f->fls_bitmap);
         printk(KERN_DEBUG "%s: FlsAlloc gives index %ld to fiber %d\n", KBUILD_MODNAME, index, f->fiber_id);
         return index;
@@ -418,7 +419,7 @@ long long do_FlsGetValue(long index, pid_t thread_id)
         if(test_bit(index, f->fls_bitmap) == 0)
                 return -1;
 
-        printk(KERN_DEBUG "%s: FlsGetValue returns a value to fiber %d\n", KBUILD_MODNAME, f->fiber_id);
+        printk(KERN_DEBUG "%s: FlsGetValue returns value %lld to fiber %d\n", KBUILD_MODNAME, f->fls[index], f->fiber_id);
 
         return f->fls[index];
 }
@@ -445,6 +446,6 @@ void do_FlsSetValue(long index, long long value, pid_t thread_id)
 
         f->fls[index] = value;
 
-        printk(KERN_DEBUG "%s: Received value from fiber %d to index %ld\n", KBUILD_MODNAME, f->fiber_id, index);
+        printk(KERN_DEBUG "%s: Received value %lld from fiber %d to index %ld\n", KBUILD_MODNAME, f->fls[index], f->fiber_id, index);
         return;
 }

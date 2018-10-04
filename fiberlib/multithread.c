@@ -6,8 +6,12 @@
 
 struct thread_info {
         unsigned long data;
+        unsigned long data2;
 };
 
+
+
+//memset(f->fls_bitmap, 0, FLS_BITMAP_SIZE*sizeof(long));
 
 
 /*void fiber_function (void * parameters)
@@ -63,11 +67,22 @@ void foo (void * param)
 {
         struct thread_info  *t = (struct thread_info *) param;
 
+        long counter = 0;
+
 fiber_again:
-        printf("FIBER: old thread %d\n", (int)t->data);
+        printf("FIBER %d: old thread %d\n", (int)t->data2, (int)t->data);
         SwitchToFiber(t->data);
+
+        long index = FlsAlloc();
+        printf("FIBER %d: index given is %ld\n", (int)t->data2, index);
+        if (index == -1)
+                exit(0);
+        FlsSetValue(counter++, index);
+        long long res = FlsGetValue(index);
+
+        printf("FIBER %d: returned value %lld\n", (int)t->data2, res);
         goto fiber_again;
-        return;
+        exit(0);
 }
 
 
@@ -77,7 +92,8 @@ void * thread_function(void * param){
         int k = ConvertThreadToFiber();
         printf("THREAD %ld: ConvertThreadToFiber done, fiber id %d\n", t->data, k);
         struct thread_info t_info ={ .data = k };
-        int new_fiber = CreateFiber(foo, 1, (void*)&t_info);
+        int new_fiber = CreateFiber(foo, 2*4096, (void*)&t_info);
+        t_info.data2 = new_fiber;
         printf("THREAD %ld: CreateFiber done, new fiber_id %d\n", t->data, new_fiber);
 again:
         SwitchToFiber(new_fiber);
@@ -86,16 +102,16 @@ again:
         return NULL;
 }
 
-
+#define NUM_THREADS 10
 int main()
 {
         printf("MAIN: Starting main...\n");
         int myfiber = ConvertThreadToFiber();
         printf("MAIN: ConvertThreadToFiber done, main fiber id %d\n", myfiber);
-        pthread_t threads[35];
-        struct thread_info t_info[35];
+        pthread_t threads[NUM_THREADS];
+        struct thread_info t_info[NUM_THREADS];
         unsigned long i = 0;
-        for (i = 0; i < 35; i++) {
+        for (i = 0; i < NUM_THREADS; i++) {
                 t_info[i].data = i;
                 pthread_create(&threads[i], NULL, thread_function, (void*) &t_info[i]);
         }

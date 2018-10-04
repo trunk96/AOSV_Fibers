@@ -4,10 +4,11 @@
 #include <asm/fpu/internal.h>
 #include <linux/string.h>
 #include <asm/processor.h>
+#include <linux/bitmap.h>
 
 
-#define MAX_FLS_POINTERS 256
-#define FLS_BITMAP_SIZE MAX_FLS_POINTERS/(8*sizeof(long))
+#define MAX_FLS_POINTERS 4096
+//#define FLS_BITMAP_SIZE MAX_FLS_POINTERS/(8*sizeof(long))
 #define H_SZ 1024
 #define DEFAULT_STACK_SIZE 1
 
@@ -77,7 +78,8 @@ struct fiber {
         unsigned long fiber_stack_size;
 
         long long fls[MAX_FLS_POINTERS];
-        unsigned long fls_bitmap[FLS_BITMAP_SIZE];
+        //unsigned long fls_bitmap[FLS_BITMAP_SIZE];
+        DECLARE_BITMAP(fls_bitmap, MAX_FLS_POINTERS);
 
         //some statistics...
         void* start_address;

@@ -19,15 +19,15 @@ static int fiber_init(void){
         //register the device as /dev/fibers
         register_fiber_device();
         register_kprobe_do_exit();
-        register_kretprobe_proc_fiber_dir();
-        register_kretprobe_finish_task_switch();
+        /*register_kretprobe_proc_fiber_dir();
+        register_kretprobe_finish_task_switch();*/
         return 0;
 }
 
 static void fiber_cleanup(void){
         unregister_kprobe_do_exit();
-        unregister_kretprobe_finish_task_switch();
-        unregister_kretprobe_proc_fiber_dir();
+        /*unregister_kretprobe_finish_task_switch();
+        unregister_kretprobe_proc_fiber_dir();*/
         unregister_fiber_device();
         printk(KERN_DEBUG "[%s] successfully removed!\n", KBUILD_MODNAME);
 }

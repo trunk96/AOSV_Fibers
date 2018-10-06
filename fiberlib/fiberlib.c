@@ -83,7 +83,7 @@ bool FlsFree(long index)
         struct fiber_arguments f = {
                 .index = index,
         };
-        return ioctl(fd, ioctl_numbers[IOCTL_FLS_ALLOC], &f);
+        return ioctl(fd, ioctl_numbers[IOCTL_FLS_FREE], &f);
 }
 
 

@@ -8,7 +8,7 @@
 DEFINE_HASHTABLE(processes, 10);
 //is the same of struct hlist_head processes[2<<10] = {...};
 
-spinlock_t struct_process_lock;
+spinlock_t struct_process_lock = __SPIN_LOCK_UNLOCKED(struct_process_lock);
 unsigned long struct_process_flags;
 
 
@@ -118,7 +118,7 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
 */
 
 		//Check if struct process already exists in an atomic way
-		spin_lock_irqsave(&(struct_process_lock), struct_process_flags);
+		    spin_lock_irqsave(&(struct_process_lock), struct_process_flags);
         ep = find_process_by_tgid(current->tgid);
         if (ep == NULL) {
                 init_process(ep, processes);
@@ -246,7 +246,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         if (f == NULL)
                 return -1;
 
-        spin_lock_irqsave(&(f->fiber_lock), flags);
+        //spin_lock_irqsave(&(f->fiber_lock), flags);
         //critical section
         if (f->attached_thread != NULL){
                 atomic64_inc(&(f->failed_activation_counter));
@@ -254,12 +254,17 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         }
         f->attached_thread = tp;
         f->activation_counter++;
+
+        prev_fiber = tp->selected_fiber;
+        tp->selected_fiber = f;
         //end of critical section
+        //spin_unlock_irqrestore(&(f->fiber_lock), flags);
+
 
         //printk(KERN_DEBUG "%s exited from critical section\n", KBUILD_MODNAME);
 
 
-        prev_fiber = tp->selected_fiber;
+
         //prev_fiber->total_time += (current->utime-prev_fiber->prev_time);
         prev_fiber->total_time += current->utime;
 
@@ -272,7 +277,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
 
 
         //save previous CPU registers in the previous fiber
-        prev_fiber->registers.r15 = prev_regs->r15;
+        /*prev_fiber->registers.r15 = prev_regs->r15;
         prev_fiber->registers.r14 = prev_regs->r14;
         prev_fiber->registers.r13 = prev_regs->r13;
         prev_fiber->registers.r12 = prev_regs->r12;
@@ -289,9 +294,10 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         prev_fiber->registers.sp = prev_regs->sp;
         prev_fiber->registers.bp = prev_regs->bp;
         prev_fiber->registers.ip = prev_regs->ip;
-        prev_fiber->registers.flags = prev_regs->flags;
+        prev_fiber->registers.flags = prev_regs->flags;*/
+        memcpy(&prev_fiber->registers, prev_regs, sizeof(struct pt_regs));
 
-        tp->selected_fiber->attached_thread = NULL;
+        prev_fiber->attached_thread = NULL;
 
         //save previous FPU registers in the previous fiber
         /*struct fpu *prev_fpu = &(current->thread.fpu);
@@ -305,7 +311,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         copy_fxregs_to_kernel(prev_fpu);
 
         //restore next CPU context from the next fiber
-        prev_regs->r15 = f->registers.r15;
+        /*prev_regs->r15 = f->registers.r15;
         prev_regs->r14 = f->registers.r14;
         prev_regs->r13 = f->registers.r13;
         prev_regs->r12 = f->registers.r12;
@@ -322,9 +328,11 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         prev_regs->sp = f->registers.sp;
         prev_regs->bp = f->registers.bp;
         prev_regs->ip = f->registers.ip;
-        prev_regs->flags = f->registers.flags;
+        prev_regs->flags = f->registers.flags;*/
+        memcpy(prev_regs, &f->registers, sizeof(struct pt_regs));
 
-        tp->selected_fiber = f;
+
+        //tp->selected_fiber = f;
 
         /*//restore next FPU registers of the next fiber
            struct fpu *next_fpu = &(f->fpu);
@@ -341,7 +349,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
 	      copy_kernel_to_fpregs(&(next_fpu->state));*/
 
         //preempt_enable();
-        spin_unlock_irqrestore(&(f->fiber_lock), flags);
+
         printk(KERN_DEBUG "%s: Successfully switched from fiber %d to fiber %d\n", KBUILD_MODNAME, prev_fiber->fiber_id, f->fiber_id);
 
         return 0;
@@ -380,6 +388,7 @@ bool do_FlsFree(long index, pid_t thread_id)
         struct process *p = find_process_by_tgid(current->tgid);
         struct thread *t;
         struct fiber *f;
+        printk(KERN_DEBUG "%s: Trying to free index %ld for a fiber\n", KBUILD_MODNAME, index);
 
         if (p == NULL)
                 return false;

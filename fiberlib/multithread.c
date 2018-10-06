@@ -1,6 +1,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 #include "fiberlib_user.h"
 
 
@@ -62,6 +63,14 @@ struct thread_info {
         exit(0);
    }
  */
+void alarm_handler(int signal)
+{
+  alarm(3);
+  printf("ALARM HANDLER: Trying to switch to fiber 10\n");
+  int ret = SwitchToFiber(10);
+  if (ret == -1)
+      printf("CANNOT SWITCH TO THREAD 10!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+}
 
 void foo (void * param)
 {
@@ -79,6 +88,9 @@ fiber_again:
                 exit(0);
         FlsSetValue(counter++, index);
         long long res = FlsGetValue(index);
+        printf("FIBER %d: trying to free index %ld\n", (int)t->data2, index);
+        if (!FlsFree(index))
+                printf("FIBER %d: cannot free index %ld\n", (int)t->data2, index);
 
         printf("FIBER %d: returned value %lld\n", (int)t->data2, res);
         goto fiber_again;
@@ -102,7 +114,7 @@ again:
         return NULL;
 }
 
-#define NUM_THREADS 10
+#define NUM_THREADS 9
 int main()
 {
         printf("MAIN: Starting main...\n");
@@ -115,8 +127,9 @@ int main()
                 t_info[i].data = i;
                 pthread_create(&threads[i], NULL, thread_function, (void*) &t_info[i]);
         }
-
-        for (i = 0; i < 35; i++) {
+        signal(SIGALRM, alarm_handler);
+        alarm(3);
+        for (i = 0; i < NUM_THREADS; i++) {
                 pthread_join(threads[i], NULL);
         }
 }

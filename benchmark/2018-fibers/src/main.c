@@ -56,7 +56,12 @@ static void main_loop(void *args) {
 		exit(EXIT_FAILURE);
 	}
 
-	FlsSetValue(q_idx, malloc(sizeof(calqueue)));
+
+
+	void * xcvb = malloc(sizeof(calqueue));
+	printf("ADDRESS INSERTED IS %lu\n", xcvb);
+	FlsSetValue(q_idx, xcvb);
+	printf("RETURNED VALUE %lu\n", FlsGetValue(q_idx));
 	calqueue_init((calqueue *)FlsGetValue(q_idx));
 	event = malloc(sizeof(msg_t));
 	event->type = INIT;

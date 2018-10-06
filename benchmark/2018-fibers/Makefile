@@ -8,7 +8,7 @@ SRC = 	src/calqueue.c \
 		src/ult.c \
 		src/fiberlib.c
 
-CFLAGS = -O3
+CFLAGS = -O1
 EXEC = test
 OBJS := $(SRC:%.c=%.o)
 OBJS := $(OBJS:%.S=%.o)

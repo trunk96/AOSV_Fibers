@@ -25,7 +25,7 @@
                 memset((char*)&(f->fpu), 0, sizeof(struct fpu));    \
                 memset(f->fls, 0, sizeof(long long)*MAX_FLS_POINTERS);                 \
                 bitmap_zero(f->fls_bitmap, MAX_FLS_POINTERS);  \
-                memset((char*)&(f->registers), 0, sizeof(struct pt_regs));                            \
+                memcpy(&f->registers, task_pt_regs(current), sizeof(struct pt_regs)); \
                 f->fiber_stack = s_ptr; \
                 f->fiber_stack_size = (ss >= 0) ? ss : DEFAULT_STACK_SIZE; \
                 f->registers.sp = (long)(f->fiber_stack)+(f->fiber_stack_size)-8; \

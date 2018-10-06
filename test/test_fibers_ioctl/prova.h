@@ -9,7 +9,7 @@ struct fiber_arguments {
         user_function_t start_function_address;
         void *start_function_arguments;
         pid_t fiber_id;
-        unsigned long index;
+        long index;
         unsigned long buffer;
         unsigned long alloc_size;
 };

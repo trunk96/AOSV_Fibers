@@ -38,8 +38,6 @@ pid_t ConvertThreadToFiber()
 
 pid_t CreateFiber(user_function_t function_pointer, unsigned long stack_size, void *parameters)
 {
-        if (!fiberlib_initialized)
-                fiberlib_init();
         //stack_size is espressed in pages but the kernel wants an order
         /*int stack_size_kernel = log2_64(stack_size);
         if (2<<stack_size_kernel != stack_size)
@@ -59,8 +57,7 @@ pid_t CreateFiber(user_function_t function_pointer, unsigned long stack_size, vo
 
 long SwitchToFiber(pid_t fiber_id)
 {
-        if (!fiberlib_initialized)
-                fiberlib_init();
+
         struct fiber_arguments f = {
                 .fiber_id = fiber_id,
         };
@@ -70,27 +67,24 @@ long SwitchToFiber(pid_t fiber_id)
 
 long FlsAlloc()
 {
-        if (!fiberlib_initialized)
-                fiberlib_init();
+
         return ioctl(fd, ioctl_numbers[IOCTL_FLS_ALLOC], 0);
 }
 
 
 bool FlsFree(long index)
 {
-        if (!fiberlib_initialized)
-                fiberlib_init();
+
         struct fiber_arguments f = {
                 .index = index,
         };
-        return ioctl(fd, ioctl_numbers[IOCTL_FLS_ALLOC], &f);
+        return ioctl(fd, ioctl_numbers[IOCTL_FLS_FREE], &f);
 }
 
 
 void FlsSetValue(long long buffer, long index)
 {
-        if (!fiberlib_initialized)
-                fiberlib_init();
+
         struct fiber_arguments f = {
                 .index = index,
                 .buffer = buffer,
@@ -101,11 +95,12 @@ void FlsSetValue(long long buffer, long index)
 
 long long FlsGetValue(long index)
 {
-        if (!fiberlib_initialized)
-                fiberlib_init();
         struct fiber_arguments f = {
                 .index = index,
         };
         //printf("Someone wants to get it's fls value at index %ld\n", index);
-        return ioctl(fd, ioctl_numbers[IOCTL_FLS_GETVALUE], &f);
+        long long a = 0;
+        a = (long long) ioctl(fd, ioctl_numbers[IOCTL_FLS_GETVALUE], &f);
+        printf("Returned value to userspace is %lu\n", a);
+        return a;
 }

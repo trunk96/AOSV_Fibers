@@ -20,73 +20,105 @@ void publish_ioctl_message()
                  IOCTL_FLS_SETVALUE);
 }
 
+spinlock_t big_lock = __SPIN_LOCK_UNLOCKED(big_lock);
+
 static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
 {
+        unsigned long flags;
+        spin_lock_irqsave(&big_lock, flags);
         struct task_struct *current_thread = current;
         pid_t thread_id=current->pid;
 
         if (cmd == IOCTL_CONVERT_THREAD_TO_FIBER) {
                 //arg has no sense in this context
-                return (long) do_ConvertThreadToFiber(thread_id);
+                long ret = (long) do_ConvertThreadToFiber(thread_id);
+                spin_unlock_irqrestore(&big_lock, flags);
+                return ret;
         }
         else if (cmd == IOCTL_CREATE_FIBER) {
                 struct fiber_arguments fa;
                 if (!access_ok(VERIFY_READ, arg, sizeof(struct fiber_arguments))) {
+                        spin_unlock_irqrestore(&big_lock, flags);
                         return -EFAULT;
                 }
                 if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
+                        spin_unlock_irqrestore(&big_lock, flags);
                         return -EFAULT;
                 }
                 //printk(KERN_DEBUG "%s fa.stackpointer is %ld, fa.start_function_address is %ld\n", KBUILD_MODNAME, fa.stack_pointer, (long)fa.start_function_address);
-                return (long) do_CreateFiber(fa.stack_pointer, fa.stack_size, fa.start_function_address, fa.start_function_arguments, thread_id);
+                long ret = (long) do_CreateFiber(fa.stack_pointer, fa.stack_size, fa.start_function_address, fa.start_function_arguments, thread_id);
+                spin_unlock_irqrestore(&big_lock, flags);
+                return ret;
         }
         else if (cmd == IOCTL_SWITCH_TO_FIBER) {
                 struct fiber_arguments fa;
                 if (!access_ok(VERIFY_READ, arg, sizeof(struct fiber_arguments))) {
+                        spin_unlock_irqrestore(&big_lock, flags);
                         return -EFAULT;
                 }
                 if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
+                        spin_unlock_irqrestore(&big_lock, flags);
                         return -EFAULT;
                 }
-                return do_SwitchToFiber(fa.fiber_id, thread_id);
+                long ret = do_SwitchToFiber(fa.fiber_id, thread_id);
+                spin_unlock_irqrestore(&big_lock, flags);
+                return ret;
         }
         else if (cmd == IOCTL_FLS_ALLOC) {
-                return (long) do_FlsAlloc(thread_id);
+                long ret = (long) do_FlsAlloc(thread_id);
+                spin_unlock_irqrestore(&big_lock, flags);
+                return ret;
         }
         else if (cmd == IOCTL_FLS_FREE) {
+                printk(KERN_DEBUG "%s: IOCTL handler for FlsFree()\n", KBUILD_MODNAME);
                 struct fiber_arguments fa;
                 if (!access_ok(VERIFY_READ, arg, sizeof(struct fiber_arguments))) {
+                        spin_unlock_irqrestore(&big_lock, flags);
                         return -EFAULT;
                 }
                 if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
+                        spin_unlock_irqrestore(&big_lock, flags);
                         return -EFAULT;
                 }
-                return (long) do_FlsFree(fa.index, thread_id);
+                long ret = (long) do_FlsFree(fa.index, thread_id);
+                spin_unlock_irqrestore(&big_lock, flags);
+                return ret;
         }
         else if (cmd == IOCTL_FLS_GETVALUE) {
                 struct fiber_arguments fa;
                 if (!access_ok(VERIFY_READ, arg, sizeof(struct fiber_arguments))) {
+                        spin_unlock_irqrestore(&big_lock, flags);
                         return -EFAULT;
                 }
                 if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
+                        spin_unlock_irqrestore(&big_lock, flags);
                         return -EFAULT;
                 }
-                return (long) do_FlsGetValue(fa.index, thread_id);
+
+                long ret = (long) do_FlsGetValue(fa.index, thread_id);
+                printk(KERN_DEBUG "%s: kernel mode returning value %lu\n", KBUILD_MODNAME, ret);
+                spin_unlock_irqrestore(&big_lock, flags);
+                return ret;
         }
         else if (cmd == IOCTL_FLS_SETVALUE) {
                 struct fiber_arguments fa;
                 if (!access_ok(VERIFY_READ, arg, sizeof(struct fiber_arguments))) {
+                        spin_unlock_irqrestore(&big_lock, flags);
                         return -EFAULT;
                 }
                 if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
+                        spin_unlock_irqrestore(&big_lock, flags);
                         return -EFAULT;
                 }
                 do_FlsSetValue(fa.index, fa.buffer, thread_id);
+                spin_unlock_irqrestore(&big_lock, flags);
                 return 0;
         }
         else {
+                spin_unlock_irqrestore(&big_lock, flags);
                 return -EINVAL;
         }
+
 }
 
 

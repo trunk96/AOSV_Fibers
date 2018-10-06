@@ -51,18 +51,17 @@ static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
                 long ret;
                 struct fiber_arguments fa;
 
-                spin_lock_irqsave(&big_lock, flags);
-
                 if (!access_ok(VERIFY_READ, arg, sizeof(struct fiber_arguments))) {
-                        spin_unlock_irqrestore(&big_lock, flags);
                         printk(KERN_DEBUG "%s: Bad pointer to IOCTL\n", KBUILD_MODNAME);
                         return -EFAULT;
                 }
                 if (copy_from_user(&fa, (void*)arg, sizeof(struct fiber_arguments))) {
-                        spin_unlock_irqrestore(&big_lock, flags);
                         printk(KERN_DEBUG "%s: Cannot copy user arguments of IOCTL\n", KBUILD_MODNAME);
                         return -EFAULT;
                 }
+
+                spin_lock_irqsave(&big_lock, flags);
+
                 ret = do_SwitchToFiber(fa.fiber_id, thread_id);
 
                 spin_unlock_irqrestore(&big_lock, flags);

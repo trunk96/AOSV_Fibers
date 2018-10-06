@@ -7,8 +7,13 @@ int proc_fiber_base_readdir(struct file *file, struct dir_context *ctx){
 								struct process * p;
 								struct task_struct *task = get_pid_task(proc_pid(file_inode(file)), PIDTYPE_PID);
 								unsigned long nents;
-								int i, counter = 0;
+								struct pid_entry *fiber_base_stuff;
+								int i, ret, counter = 0;
 								struct fiber *fp;
+
+								if(task == NULL || file == NULL || ctx == NULL)
+																return -ENOENT;
+
 
 								p = find_process_by_tgid(task->tgid);
 
@@ -16,7 +21,7 @@ int proc_fiber_base_readdir(struct file *file, struct dir_context *ctx){
 																return 0;
 
 								nents = atomic64_read(&(p->last_fiber_id));
-								struct pid_entry fiber_base_stuff[nents];
+								fiber_base_stuff = kmalloc(nents * sizeof(struct pid_entry), GFP_KERNEL);
 								memset(fiber_base_stuff, 0, nents * sizeof(struct pid_entry));
 								hash_for_each_rcu(p->fibers, i, fp, node){
 																if (fp == NULL)
@@ -30,7 +35,9 @@ int proc_fiber_base_readdir(struct file *file, struct dir_context *ctx){
 								}
 
 								//here we have the array, so we can call again readdir to show them into /proc/{PID}/fibers
-								return readdir(file, ctx, fiber_base_stuff, nents);
+								ret = readdir(file, ctx, fiber_base_stuff, nents);
+								kfree(fiber_base_stuff);
+								return ret;
 }
 
 
@@ -40,8 +47,13 @@ struct dentry *proc_fiber_base_lookup(struct inode *dir, struct dentry *dentry, 
 								struct process * p;
 								struct task_struct *task = get_pid_task(proc_pid(dir), PIDTYPE_PID);
 								unsigned long nents;
+								struct pid_entry *fiber_base_stuff;
 								int i, counter = 0;
 								struct fiber *fp;
+								struct dentry *ret;
+
+								if(task == NULL || dir == NULL || dentry == NULL)
+																return -ENOENT;
 
 								p = find_process_by_tgid(task->tgid);
 
@@ -50,7 +62,7 @@ struct dentry *proc_fiber_base_lookup(struct inode *dir, struct dentry *dentry, 
 																return 0;
 
 								nents = atomic64_read(&(p->last_fiber_id));
-								struct pid_entry fiber_base_stuff[nents];
+								fiber_base_stuff = kmalloc(nents * sizeof(struct pid_entry), GFP_KERNEL);
 								memset(fiber_base_stuff, 0, nents * sizeof(struct pid_entry));
 								hash_for_each_rcu(p->fibers, i, fp, node){
 																if (fp == NULL)
@@ -64,7 +76,9 @@ struct dentry *proc_fiber_base_lookup(struct inode *dir, struct dentry *dentry, 
 								}
 
 								//here we have the array, so we can call again readdir to show them into /proc/{PID}/fibers
-								return look(dir, dentry, fiber_base_stuff, nents);
+								ret = look(dir, dentry, fiber_base_stuff, nents);
+								kfree(fiber_base_stuff);
+								return ret;
 }
 
 

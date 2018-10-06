@@ -2,7 +2,7 @@
 #include <linux/spinlock.h>
 #include <linux/proc_fs.h>
 #include <linux/sched.h>
-
+#include <linux/percpu-defs.h>
 #include <linux/stat.h>
 #include <linux/fs.h>
 #include <linux/kallsyms.h>

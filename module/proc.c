@@ -53,7 +53,7 @@ struct dentry *proc_fiber_base_lookup(struct inode *dir, struct dentry *dentry, 
 				struct dentry *ret;
 
 				if(task == NULL || dir == NULL || dentry == NULL)
-								return -ENOENT;
+								return ERR_PTR(-ENOENT);
 
 				p = find_process_by_tgid(task->tgid);
 

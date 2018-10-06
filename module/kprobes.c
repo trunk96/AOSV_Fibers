@@ -154,7 +154,7 @@ int exit_cleanup(struct kprobe * k, struct pt_regs * r)
 }
 
 
-struct task_struct *prev = NULL;
+DEFINE_PER_CPU(struct task_struct *, prev_task) = NULL;
 
 
 int fiber_timer(struct kretprobe_instance *ri, struct pt_regs *regs)
@@ -165,14 +165,25 @@ int fiber_timer(struct kretprobe_instance *ri, struct pt_regs *regs)
 				struct process *prev_p;
 				struct thread *prev_th;
 				struct fiber *prev_f;
-				if (prev == NULL)
+				struct task_struct * prev;
+
+				prev = get_cpu_var(prev_task);
+
+				if (prev == NULL){
+								put_cpu_var(prev_task);
 								goto end;
+				}
 
 				prev_p = find_process_by_tgid(prev->tgid);
-				if (prev_p == NULL)
+				if (prev_p == NULL){
+								put_cpu_var(prev_task);
 								goto end;
+				}
 
 				prev_th = find_thread_by_pid(prev->pid, prev_p);
+
+				put_cpu_var(prev_task);
+
 				if (prev_th == NULL)
 								goto end;
 
@@ -184,7 +195,7 @@ int fiber_timer(struct kretprobe_instance *ri, struct pt_regs *regs)
 				prev_f->total_time += prev->utime;
 
 end:
-				next_p= find_process_by_tgid(current->tgid);
+				next_p = find_process_by_tgid(current->tgid);
 				if (next_p == NULL)
 								goto end_not_our_fiber;
 

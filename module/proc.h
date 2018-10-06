@@ -24,15 +24,15 @@ extern proc_setattr_t setattr;
 
 
 struct proc_inode {
-								struct pid *pid;
-								unsigned int fd;
-								union proc_op op;
-								struct proc_dir_entry *pde;
-								struct ctl_table_header *sysctl;
-								struct ctl_table *sysctl_entry;
-								struct hlist_node sysctl_inodes;
-								const struct proc_ns_operations *ns_ops;
-								struct inode vfs_inode;
+				struct pid *pid;
+				unsigned int fd;
+				union proc_op op;
+				struct proc_dir_entry *pde;
+				struct ctl_table_header *sysctl;
+				struct ctl_table *sysctl_entry;
+				struct hlist_node sysctl_inodes;
+				const struct proc_ns_operations *ns_ops;
+				struct inode vfs_inode;
 };
 
 
@@ -45,12 +45,12 @@ struct dentry *proc_fiber_base_lookup(struct inode *, struct dentry *, unsigned 
 
 static inline struct proc_inode *PROC_I(const struct inode *inode)
 {
-								return container_of(inode, struct proc_inode, vfs_inode);
+				return container_of(inode, struct proc_inode, vfs_inode);
 }
 
 static inline struct pid *proc_pid(struct inode *inode)
 {
-								return PROC_I(inode)->pid;
+				return PROC_I(inode)->pid;
 }
 
 
@@ -60,21 +60,21 @@ typedef struct proc_dir_entry *(*__proc_create_t)(struct proc_dir_entry **, cons
 typedef struct dentry *(*proc_lookup_de_t)(struct inode *, struct dentry *, struct proc_dir_entry *);
 
 struct process * get_proc_process_fiber(struct inode *dir){
-								struct task_struct *task;
-								struct process *p = NULL;
+				struct task_struct *task;
+				struct process *p = NULL;
 
-								rcu_read_lock();
-								task = pid_task(proc_pid(dir), PIDTYPE_PID);
-								if (task != NULL) {
-																p = find_process_by_tgid(task->tgid);
-								}
-								rcu_read_unlock();
-								return p;
+				rcu_read_lock();
+				task = pid_task(proc_pid(dir), PIDTYPE_PID);
+				if (task != NULL) {
+												p = find_process_by_tgid(task->tgid);
+				}
+				rcu_read_unlock();
+				return p;
 }
 
 
 struct file_operations f_fops = {
-								read: proc_fiber_read,
+				read: proc_fiber_read,
 };
 
 

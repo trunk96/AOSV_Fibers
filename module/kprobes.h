@@ -15,64 +15,64 @@ extern void proc_fiber_exit(struct process *);
 
 
 #define NOD(NAME, MODE, IOP, FOP, OP) {     \
-																.name = (NAME),         \
-																.len  = sizeof(NAME) - 1,     \
-																.mode = MODE,         \
-																.iop  = IOP,          \
-																.fop  = FOP,          \
-																.op   = OP,         \
+				.name = (NAME),         \
+				.len  = sizeof(NAME) - 1,     \
+				.mode = MODE,         \
+				.iop  = IOP,          \
+				.fop  = FOP,          \
+				.op   = OP,         \
 }
 
 #define DIR(NAME, MODE, iops, fops) \
-								NOD(NAME, (S_IFDIR|(MODE)), &iops, &fops, {} )
+				NOD(NAME, (S_IFDIR|(MODE)), &iops, &fops, {} )
 #define REG(NAME, MODE, fops)       \
-								NOD(NAME, (S_IFREG|(MODE)), NULL, &fops, {})
+				NOD(NAME, (S_IFREG|(MODE)), NULL, &fops, {})
 
 
 struct proc_inode {
-								struct pid *pid;
-								unsigned int fd;
-								union proc_op op;
-								struct proc_dir_entry *pde;
-								struct ctl_table_header *sysctl;
-								struct ctl_table *sysctl_entry;
-								struct hlist_node sysctl_inodes;
-								const struct proc_ns_operations *ns_ops;
-								struct inode vfs_inode;
+				struct pid *pid;
+				unsigned int fd;
+				union proc_op op;
+				struct proc_dir_entry *pde;
+				struct ctl_table_header *sysctl;
+				struct ctl_table *sysctl_entry;
+				struct hlist_node sysctl_inodes;
+				const struct proc_ns_operations *ns_ops;
+				struct inode vfs_inode;
 };
 
 
 static inline struct proc_inode *PROC_I(const struct inode *inode)
 {
-								return container_of(inode, struct proc_inode, vfs_inode);
+				return container_of(inode, struct proc_inode, vfs_inode);
 }
 
 static inline struct pid *proc_pid(struct inode *inode)
 {
-								return PROC_I(inode)->pid;
+				return PROC_I(inode)->pid;
 }
 
 
 
 struct file_operations file_ops = {
-								.read  = generic_read_dir,
-								.iterate_shared = proc_fiber_base_readdir,
-								.llseek  = generic_file_llseek,
+				.read  = generic_read_dir,
+				.iterate_shared = proc_fiber_base_readdir,
+				.llseek  = generic_file_llseek,
 };
 
 struct inode_operations inode_ops = {
-								.lookup = proc_fiber_base_lookup,
+				.lookup = proc_fiber_base_lookup,
 };
 
 
 const struct pid_entry additional[] = {
-								DIR("fibers", S_IRUGO|S_IXUGO, inode_ops, file_ops),
+				DIR("fibers", S_IRUGO|S_IXUGO, inode_ops, file_ops),
 };
 
 
 struct tgid_dir_data {
-								struct file *file;
-								struct dir_context *ctx;
+				struct file *file;
+				struct dir_context *ctx;
 };
 
 extern struct hlist_head processes;

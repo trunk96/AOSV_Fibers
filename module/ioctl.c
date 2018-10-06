@@ -95,10 +95,11 @@ static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
                         return -EFAULT;
                 }
 
-                long ret = (long) do_FlsGetValue(fa.index, thread_id);
+                long long ret = do_FlsGetValue(fa.index, thread_id);
+                copy_to_user(fa.buffer, &ret, sizeof(long long));
                 printk(KERN_DEBUG "%s: kernel mode returning value %lu\n", KBUILD_MODNAME, ret);
                 spin_unlock_irqrestore(&big_lock, flags);
-                return ret;
+                return 0;
         }
         else if (cmd == IOCTL_FLS_SETVALUE) {
                 struct fiber_arguments fa;

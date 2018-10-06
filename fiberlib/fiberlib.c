@@ -42,7 +42,7 @@ pid_t CreateFiber(user_function_t function_pointer, unsigned long stack_size, vo
                 fiberlib_init();
         //stack_size is espressed in pages but the kernel wants an order
         /*int stack_size_kernel = log2_64(stack_size);
-        if (2<<stack_size_kernel != stack_size)
+           if (2<<stack_size_kernel != stack_size)
                 stack_size_kernel++;*/
         struct fiber_arguments f = {
                 .stack_size = stack_size,
@@ -103,9 +103,14 @@ long long FlsGetValue(long index)
 {
         if (!fiberlib_initialized)
                 fiberlib_init();
+        long long a = 0;
         struct fiber_arguments f = {
                 .index = index,
+                .buffer = (unsigned long)&a,
         };
         //printf("Someone wants to get it's fls value at index %ld\n", index);
-        return ioctl(fd, ioctl_numbers[IOCTL_FLS_GETVALUE], &f);
+
+        ioctl(fd, ioctl_numbers[IOCTL_FLS_GETVALUE], &f);
+        //printf("Returned value to userspace is %lu\n", a);
+        return a;
 }

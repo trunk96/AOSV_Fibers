@@ -1,6 +1,5 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/hashtable.h>
 #include "device.h"
 
 
@@ -14,6 +13,8 @@ extern int unregister_kretprobe_proc_fiber_dir(void);
 
 
 MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Emanuele De Santis <desantis.1664777@studenti.uniroma1.it> - Costagliola Maria Ludovica <costagliola.1657716@studenti.uniroma1.it>");
+MODULE_DESCRIPTION("Fibers implementation for Linux Kernel");
 
 static int fiber_init(void){
         //register the device as /dev/fibers

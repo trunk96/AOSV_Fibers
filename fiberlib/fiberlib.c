@@ -3,11 +3,11 @@
 
 
 
-void fiberlib_init()
+__attribute__((constructor)) void fiberlib_init()
 {
         fd = open("/dev/fibers", O_RDONLY);
         char buf[256];
-        long ret = read(fd, buf, sizeof(buf));
+        read(fd, buf, sizeof(buf));
         char *token;
         char *ptr;
         const char delimiter[2]="\n";
@@ -22,9 +22,13 @@ void fiberlib_init()
                 i++;
         }
         fiberlib_initialized = 1;
-        double foo = 0.0;
-        foo += 0.05;
         return;
+}
+
+__attribute__((destructor)) void close_fiberlib()
+{
+    close(fd);
+    return;
 }
 
 
@@ -40,19 +44,13 @@ pid_t CreateFiber(user_function_t function_pointer, unsigned long stack_size, vo
 {
         if (!fiberlib_initialized)
                 fiberlib_init();
-        //stack_size is espressed in pages but the kernel wants an order
-        /*int stack_size_kernel = log2_64(stack_size);
-           if (2<<stack_size_kernel != stack_size)
-                stack_size_kernel++;*/
         struct fiber_arguments f = {
                 .stack_size = stack_size,
                 .start_function_address = function_pointer,
                 .start_function_arguments = parameters,
         };
-        //f.stack_pointer = malloc((4096<<stack_size_kernel)*sizeof(char));
         posix_memalign(&(f.stack_pointer), 16, stack_size);
         bzero(f.stack_pointer, stack_size);
-        //printf("Stack address is %p\n", f.stack_pointer);
         return (pid_t) ioctl(fd, ioctl_numbers[IOCTL_CREATE_FIBER], &f);
 }
 
@@ -108,9 +106,7 @@ long long FlsGetValue(long index)
                 .index = index,
                 .buffer = (unsigned long)&a,
         };
-        //printf("Someone wants to get it's fls value at index %ld\n", index);
 
         ioctl(fd, ioctl_numbers[IOCTL_FLS_GETVALUE], &f);
-        //printf("Returned value to userspace is %lu\n", a);
         return a;
 }

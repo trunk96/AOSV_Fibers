@@ -81,7 +81,7 @@ extern struct fiber * find_fiber_by_id(pid_t, struct process *);
 extern struct thread * find_thread_by_pid(pid_t, struct process *);
 extern void do_exit(long);
 
-int clear_thread_struct(struct kprobe *, struct pt_regs *);
+int exit_cleanup(struct kprobe *, struct pt_regs *);
 int fiber_timer(struct kretprobe_instance *, struct pt_regs *);
 int dummy_fnct(struct kretprobe_instance *, struct pt_regs *);
 int proc_insert_dir(struct kretprobe_instance *, struct pt_regs *);

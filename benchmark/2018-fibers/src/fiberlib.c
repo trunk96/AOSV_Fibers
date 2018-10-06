@@ -3,11 +3,11 @@
 
 
 
-void fiberlib_init()
+__attribute__((constructor)) void fiberlib_init()
 {
         fd = open("/dev/fibers", O_RDONLY);
         char buf[256];
-        long ret = read(fd, buf, sizeof(buf));
+        read(fd, buf, sizeof(buf));
         char *token;
         char *ptr;
         const char delimiter[2]="\n";
@@ -22,9 +22,13 @@ void fiberlib_init()
                 i++;
         }
         fiberlib_initialized = 1;
-        double foo = 0.0;
-        foo += 0.05;
         return;
+}
+
+__attribute__((destructor)) void close_fiberlib()
+{
+    close(fd);
+    return;
 }
 
 

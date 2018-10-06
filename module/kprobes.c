@@ -3,7 +3,7 @@
 
 int register_kprobe_do_exit(void)
 {
-								do_exit_kp.pre_handler = clear_thread_struct;
+								do_exit_kp.pre_handler = exit_cleanup;
 								do_exit_kp.addr = (kprobe_opcode_t *)&(do_exit);
 								register_kprobe(&do_exit_kp);
 								return 0;
@@ -50,8 +50,6 @@ int register_kretprobe_proc_fiber_dir(void)
 int unregister_kretprobe_proc_fiber_dir(void)
 {
 								unregister_kretprobe(&proc_readdir_krp);
-								/*unregister_kretprobe(&proc_fiber_dir_krp[0]);
-								   unregister_kretprobe(&proc_fiber_dir_krp[1]);*/
 								return 0;
 }
 
@@ -68,8 +66,6 @@ int entry_proc_insert_dir(struct kretprobe_instance *k, struct pt_regs *regs)
 								struct file *file = (struct file *) regs->di;
 								struct dir_context * ctx = (struct dir_context *) regs->si;
 								struct tgid_dir_data data;
-								//printk(KERN_DEBUG "%s: we are into proc_tgid_base_readdir, PID %d\n", KBUILD_MODNAME, current->tgid);
-								printk(KERN_DEBUG "%s: file address is %lu, ctx address is %lu, readdir address is %lu\n", KBUILD_MODNAME, (unsigned long)file, (unsigned long)ctx, (unsigned long)readdir);
 								data.file = file;
 								data.ctx = ctx;
 								memcpy(k->data, &data, sizeof(struct tgid_dir_data));
@@ -82,12 +78,9 @@ int proc_insert_dir(struct kretprobe_instance *k, struct pt_regs *regs)
 
 								//we have to insert "fibers" directory only in a fiberized process
 								struct tgid_dir_data *data = (struct tgid_dir_data *)(k->data);
-								//unsigned long tgid;
 								struct process *p;
 								unsigned long flags;
 								unsigned int pos;
-								/*if (kstrtoul(data->file->f_path.dentry->d_name.name, 10, &tgid))
-												return 0;*/
 								struct task_struct * task = get_pid_task(proc_pid(file_inode(data->file)), PIDTYPE_PID);
 
 								p = find_process_by_tgid(task->tgid);
@@ -103,21 +96,20 @@ int proc_insert_dir(struct kretprobe_instance *k, struct pt_regs *regs)
 																spin_unlock_irqrestore(&check_nents, flags);
 								}
 								pos = nents;
-								printk(KERN_DEBUG "%s: On the other side, file address is %lu, ctx address is %lu, pos is %lu\n", KBUILD_MODNAME, (unsigned long)data->file, (unsigned long)data->ctx, (unsigned long)data->ctx->pos);
 								readdir(data->file, data->ctx, additional -(pos - 2), pos - 1);
 								return 0;
 }
 
-int clear_thread_struct(struct kprobe * k, struct pt_regs * r)
+int exit_cleanup(struct kprobe * k, struct pt_regs * r)
 {
 								//current is dying
 								struct process *p = find_process_by_tgid(current->tgid);
 								struct thread *t;
 								struct pt_regs *prev_regs;
 								struct fiber * prev_fiber;
+								struct fpu *prev_fpu;
 								long ret;
 								if (p == NULL) {
-																//printk(KERN_DEBUG "[%s] we are in the do_exit for pid %d, not my process\n", KBUILD_MODNAME, current->tgid);
 																return 0;
 								}
 
@@ -125,40 +117,26 @@ int clear_thread_struct(struct kprobe * k, struct pt_regs * r)
 								if (t == NULL)
 																return 0;
 
-								if (t->selected_fiber != NULL) {
+								ret = atomic64_dec_return(&(t->parent->active_threads));
+
+								if (t->selected_fiber != NULL && ret != 0) {
 																//save the CPU state of the fiber currently running on that thread
 																preempt_disable();
 																prev_regs = task_pt_regs(current);
 																prev_fiber = t->selected_fiber;
 
 																//save previous CPU registers in the previous fiber
-																prev_fiber->registers.r15 = prev_regs->r15;
-																prev_fiber->registers.r14 = prev_regs->r14;
-																prev_fiber->registers.r13 = prev_regs->r13;
-																prev_fiber->registers.r12 = prev_regs->r12;
-																prev_fiber->registers.r11 = prev_regs->r11;
-																prev_fiber->registers.r10 = prev_regs->r10;
-																prev_fiber->registers.r9 = prev_regs->r9;
-																prev_fiber->registers.r8 = prev_regs->r8;
-																prev_fiber->registers.ax = prev_regs->ax;
-																prev_fiber->registers.bx = prev_regs->bx;
-																prev_fiber->registers.cx = prev_regs->cx;
-																prev_fiber->registers.dx = prev_regs->dx;
-																prev_fiber->registers.si = prev_regs->si;
-																prev_fiber->registers.di = prev_regs->di;
-																prev_fiber->registers.sp = prev_regs->sp;
-																prev_fiber->registers.bp = prev_regs->bp;
-																prev_fiber->registers.ip = prev_regs->ip;
-
-																t->selected_fiber->attached_thread = NULL;
+																memcpy(&prev_fiber->registers, prev_regs, sizeof(struct pt_regs));
 
 																//save FPU registers
-																//...
+																prev_fpu = &(prev_fiber->fpu);
+												        copy_fxregs_to_kernel(prev_fpu);
+
+																t->selected_fiber->attached_thread = NULL;
 
 																preempt_enable();
 								}
 								hash_del_rcu(&(t->node));
-								ret = atomic64_dec_return(&(t->parent->active_threads));
 								kfree(t);
 								if(ret == 0) {
 																//this is the last thread, so we have to delete both all the fibers and the struct process
@@ -167,15 +145,11 @@ int clear_thread_struct(struct kprobe * k, struct pt_regs * r)
 																hash_for_each_rcu(p->fibers, i, f, node){
 																								if (f == NULL)
 																																break;
-																								//here we have also to kfree the fls
-																								printk(KERN_DEBUG "%s: Time value for fiber %d is %lu\n", KBUILD_MODNAME, f->fiber_id, f->total_time);
-																								//proc_remove(f->fiber_proc_entry);
 																								kfree(f);
 																}
 																hash_del_rcu(&(p->node));
-																//proc_fiber_exit(p);
 																kfree(p);
-																printk(KERN_DEBUG "[%s] PID %d cleared!\n", KBUILD_MODNAME, current->tgid);
+																printk(KERN_DEBUG "%s: Cleanup for PID %d successfully done!\n", KBUILD_MODNAME, current->tgid);
 								}
 								return 0;
 }

@@ -29,7 +29,7 @@ static void fiber_cleanup(void){
         unregister_kretprobe_finish_task_switch();
         unregister_kretprobe_proc_fiber_dir();
         unregister_fiber_device();
-        printk(KERN_DEBUG "[%s] successfully removed!\n", KBUILD_MODNAME);
+        printk(KERN_DEBUG "%s: successfully removed!\n", KBUILD_MODNAME);
 }
 
 module_init(fiber_init);

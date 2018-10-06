@@ -1,10 +1,4 @@
-#include <linux/fs.h>
-#include <linux/uaccess.h>
-#include <linux/module.h>
-#include <linux/device.h>
-#include <linux/string.h>
 #include "device.h"
-
 
 
 long major=0;
@@ -30,18 +24,27 @@ int register_fiber_device(void)
 {
         void *ptr_err;
         fibers_fops.unlocked_ioctl = ioctl_function;
-        if ((major = register_chrdev(0, "fibers", &fibers_fops)) < 0)
+        if ((major = register_chrdev(0, "fibers", &fibers_fops)) < 0){
+                printk(KERN_DEBUG "%s: Cannot get a valid major number for /dev/fibers\n", KBUILD_MODNAME);
                 return major;
+        }
 
         class_fibers = class_create(THIS_MODULE, "fibers");
-        if (IS_ERR(ptr_err = class_fibers))
+        if (IS_ERR(ptr_err = class_fibers)){
+                printk(KERN_DEBUG "%s: Cannot create a device class for /dev/fibers\n", KBUILD_MODNAME);
                 goto err2;
+        }
+
         class_fibers->devnode = fiber_user_devnode;
 
         dev_fibers = device_create(class_fibers, NULL, MKDEV(major, 0), NULL, "fibers");
-        if (IS_ERR(ptr_err = dev_fibers))
+        if (IS_ERR(ptr_err = dev_fibers)){
+                printk(KERN_DEBUG "%s: Cannot create /dev/fibers\n", KBUILD_MODNAME);
                 goto err;
-        printk(KERN_DEBUG "[%s] Device successfully registered in /dev/fibers with major number %ld\n", KBUILD_MODNAME, major);
+        }
+        
+        printk(KERN_DEBUG "%s: Device successfully registered in /dev/fibers with major number %ld\n", KBUILD_MODNAME, major);
+
         //publish ioctl cmds here
         publish_message();
         return 0;

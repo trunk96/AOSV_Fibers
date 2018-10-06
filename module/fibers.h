@@ -8,7 +8,6 @@
 
 
 #define MAX_FLS_POINTERS 4096
-//#define FLS_BITMAP_SIZE MAX_FLS_POINTERS/(8*sizeof(long))
 #define H_SZ 1024
 #define DEFAULT_STACK_SIZE 1
 

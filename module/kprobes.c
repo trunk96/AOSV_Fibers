@@ -212,6 +212,8 @@ end:
 
 
 end_not_our_fiber:
+				prev = get_cpu_var(prev_task);
 				prev = current;
+				put_cpu_var(prev_task);
 				return 0;
 }

@@ -137,8 +137,6 @@ pid_t do_CreateFiber(void *stack_pointer, unsigned long stack_size, user_functio
 
 long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
 {
-
-        //unsigned long flags;
         struct process *ep;
         struct thread *tp;
         struct fiber *f;
@@ -163,8 +161,6 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         if (f == NULL)
                 return -1;
 
-        //spin_lock_irqsave(&(f->fiber_lock), flags);
-        //critical section
         if (f->attached_thread != NULL){
                 atomic64_inc(&(f->failed_activation_counter));
                 return -1;
@@ -174,16 +170,10 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
 
         prev_fiber = tp->selected_fiber;
         tp->selected_fiber = f;
-        //end of critical section
-        //spin_unlock_irqrestore(&(f->fiber_lock), flags);
 
-        //prev_fiber->total_time += (current->utime-prev_fiber->prev_time);
         prev_fiber->total_time += current->utime;
 
         f->prev_time = current->utime;
-
-        //kernel_fpu_begin();
-        //preempt_disable();
 
         //save previous CPU registers in the previous fiber
         prev_regs = task_pt_regs(current);
@@ -204,7 +194,6 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         next_fx_regs = &(next_fpu->state.fxsave);
         copy_kernel_to_fxregs(next_fx_regs);
 
-        //preempt_enable();
         return 0;
 }
 

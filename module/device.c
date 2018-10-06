@@ -5,6 +5,19 @@ long major=0;
 static struct class *class_fibers;
 static struct device *dev_fibers;
 
+static ssize_t fibers_read(struct file *f, char __user *buf, size_t len, loff_t *off)
+{
+		size_t i;
+        if (*off >= strnlen(string_message, MESSAGE_MAX_LEN))
+                return 0;
+        i = min_t(size_t, len, strnlen(string_message, MESSAGE_MAX_LEN));
+        if (copy_to_user(buf, (string_message+*off), i)) {
+                return -EFAULT;
+        }
+        *off += i;
+        return i;
+
+}
 
 
 static struct file_operations fibers_fops = {
@@ -42,7 +55,7 @@ int register_fiber_device(void)
                 printk(KERN_DEBUG "%s: Cannot create /dev/fibers\n", KBUILD_MODNAME);
                 goto err;
         }
-        
+
         printk(KERN_DEBUG "%s: Device successfully registered in /dev/fibers with major number %ld\n", KBUILD_MODNAME, major);
 
         //publish ioctl cmds here
@@ -61,21 +74,4 @@ void unregister_fiber_device(void)
         device_destroy(class_fibers, MKDEV(major, 0));
         class_destroy(class_fibers);
         return unregister_chrdev(major, "fibers");
-}
-
-
-
-
-static ssize_t fibers_read(struct file *f, char __user *buf, size_t len, loff_t *off)
-{
-		size_t i;
-        if (*off >= strnlen(string_message, MESSAGE_MAX_LEN))
-                return 0;
-        i = min_t(size_t, len, strnlen(string_message, MESSAGE_MAX_LEN));
-        if (copy_to_user(buf, (string_message+*off), i)) {
-                return -EFAULT;
-        }
-        *off += i;
-        return i;
-
 }

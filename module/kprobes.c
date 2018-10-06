@@ -182,7 +182,6 @@ int fiber_timer(struct kretprobe_instance *ri, struct pt_regs *regs)
 
 				prev_th = find_thread_by_pid(prev->pid, prev_p);
 
-				put_cpu_var(prev_task);
 
 				if (prev_th == NULL)
 								goto end;
@@ -191,8 +190,9 @@ int fiber_timer(struct kretprobe_instance *ri, struct pt_regs *regs)
 				if (prev_f == NULL)
 								goto end;
 
-				//prev_f->total_time += (prev->utime - prev_f->prev_time);
 				prev_f->total_time += prev->utime;
+
+				put_cpu_var(prev_task);
 
 end:
 				next_p = find_process_by_tgid(current->tgid);

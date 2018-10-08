@@ -20,16 +20,26 @@ Fibers can be seen as a lightweight thread of execution, but, unlike threads tha
 
 \subsection*{MODULE}
 The module implemented in \texttt{module.c} is licensed under the \textit{General Public License} and contains the main functions for initialization and exit.\bigskip\\
-When the module is loaded, it will register the device that is needed to let the paradigm of ioctl work, through \textit{register\_fiber\_device()}, and several kprobes added to have a sound and complete implementation of the fibers.\bigskip\\
+When the module is loaded, it will register the device that is needed to let the paradigm of ioctl work, through \texttt{register\_fiber\_device()}, and several kprobes added to have a sound and complete implementation of the fibers.\bigskip\\
 At the unloading of the module, there is a cleanup function that takes care of unregistering all kprobes and fiber\_device.
 
 \subsection*{DEVICE}
+Inside \texttt{device.c} we registered a new character device associated to the first available major number. We needed to create a class and the device in order to make it visible to the user and accessible by every user, not just by \textit{sudo}.\bigskip\\
+The content of the device accessible through a \textit{read} is stored inside the extern variable \texttt{string\_message} and copied to the user. \texttt{string\_message} is filled inside the file \texttt{ioctl.c} with all the new seven functions that will then be possible to call.
 
 \section{Kernel Level}
+We developed the whole logic of the program at kernel level, to make accessible to the user the minimal amount of information.
+
 \subsection*{IOCTL}
-\subsection*{CONVERT\_THREAD\_TO\_FIBER}
-\subsection*{CREATE\_FIBER}
-\subsection*{SWITCH\_TO\_FIBER}
+The file \texttt{ioctl.c} comes into play each time is issued an ioctl call at user level. We have seven macros, one for each function, that are defined inside \texttt{ioctl.h} as \textbf{\_IO} and are associated each one to a different number, from 0 to 6.\bigskip\\
+The main function is \texttt{fibers\_ioctl()} where there are a series of $if$ to distinguish exactly the call made according to the macro used. If the user was supposed to pass some parameters wrapped around a struct, there are a couple of checks on this structure and it is copied inside a local structure. After these precautions, we call the real function that performs the actual operations requested by the user.\bigskip\\
+In case of a switch, we pay attention to pick up a lock right before calling the actual switch function and release it as soon as this function returns. This mechanism is used since we are in a multhithread context and only one thread at a time should perform the switch to be safe and secured.\bigskip\\
+If the user issues an ioctl call to get a value inside the fiber local storage, then it is important to make a \texttt{copy\_to\_user} with this just retrieved value.\bigskip\\
+The actual functions are implemented inside \texttt{fibers.c}.
+
+\subsection*{CONVERT A THREAD INTO A FIBER}
+\subsection*{\textit{CREATE\_FIBER}}
+\subsection*{\textit{SWITCH\_TO\_FIBER}}
 \subsection*{FIBER\_LOCAL\_STORAGE}
 \subsection*{KPROBES}
 

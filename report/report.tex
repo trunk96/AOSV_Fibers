@@ -14,6 +14,28 @@
 \begin{document}
 
 \maketitle
+\section{Introduction}
+This essay discusses the implementation of the fibers, made as final project for the \textit{Advanced operating systems and virtualization} course. Fibers corresponds to User-Level Threads, but implemented at kernel-level in Windows operating systems. Through this project, we took care of inserting this functionality inside the Linux kernel. To accomplish it, we have developed a kernel module that implements all functionalities needed to support their execution.\bigskip\\
+Fibers can be seen as a lightweight thread of execution, but, unlike threads that are scheduled by the kernel itself, they switch the execution from one fiber to another explicitly and the changes in the execution context are made by the newly implemented module.
 
+\subsection*{MODULE}
+The module implemented in \texttt{module.c} is licensed under the \textit{General Public License} and contains the main functions for initialization and exit.\bigskip\\
+When the module is loaded, it will register the device that is needed to let the paradigm of ioctl work, through \textit{register\_fiber\_device()}, and several kprobes added to have a sound and complete implementation of the fibers.\bigskip\\
+At the unloading of the module, there is a cleanup function that takes care of unregistering all kprobes and fiber\_device.
 
+\subsection*{DEVICE}
+
+\section{Kernel Level}
+\subsection*{IOCTL}
+\subsection*{CONVERT\_THREAD\_TO\_FIBER}
+\subsection*{CREATE\_FIBER}
+\subsection*{SWITCH\_TO\_FIBER}
+\subsection*{FIBER\_LOCAL\_STORAGE}
+\subsection*{KPROBES}
+
+\section{User Level}
+\subsection*{IOCTL Interaction}
+\subsection*{FIBER\_LIBRARY}
+
+\section{Proc subsystem}
 \end{document}

@@ -146,6 +146,14 @@ To show under \texttt{/proc/\{PID\}/fibers} all the pseudofiles corresponding to
 Each of these files has the same \texttt{read} handler, that extract information from its argument \texttt{struct file}, to understand which fiber's information outputs to user-level.
 
 \section{User Level}
+To make visible to user-level applications all the interfaces we did in the kernel code, we developed an user-level library that is able to take the user-level application's call and redirect in the correct way to the kernel module using IOCTL.
+
+Since we use a dynamically assigned major number for the device \texttt{/dev/fibers} to compute IOCTL commands' numbers, we had to find a way to pass these numbers to user-space.
+The solution was to implement a \texttt{read} handler for \texttt{/dev/fibers} (besides the \texttt{unlocked\_ioctl}) that outputs the IOCTL commands' numbers in a predefinite scheme.
+
+The user-space library registers a constructor that opens a file descriptor to \texttt{/dev/fibers}, reads on it and stores the numbers, following the predefinite scheme.
+
+Moreover it wraps all the IOCTL calls to hide the complexity to the user and to pass the data the user provides in the correct manner.
 
 
 

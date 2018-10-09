@@ -3,6 +3,7 @@
 \usepackage{color}
 \usepackage{fullpage}
 \usepackage[htt]{hyphenat}
+\usepackage{graphicx}
 
 
 \definecolor{mygreen}{rgb}{0,0.6,0}
@@ -158,4 +159,22 @@ Moreover it wraps all the IOCTL calls to hide the complexity to the user and to 
 
 
 \section{Performances}
+Using the given benchmark application, we was able to perform a basic performance test of our module with respect to the userspace implementation.
+In the first case we run 15 iteration with growing number of fibers (each time 32 fibers more than the previous time).
+In the second case we run again 15 iteration of the test application with 550 fibers running and we collected the results. We used PyPlot to plot all the data collected.
+
+\includegraphics[scale=0.8]{../perf/user-kernel}
+
+As we can see in this first plot, it is clear that our module usually takes more time w.r.t. the userspace implementation. This is because of the context switches from user-space to kernel-space and vice-versa. We can also notice a deterioration of the performances as the time goes on caused by CPU throttling (in fact the benchmark generates a lot of CPU work, so the CPU temperature increases).
+
+Anyway it is possible to see that kernel level implementation runs approximately in constant time w.r.t. the number of fibers (in fact the kernel module is called approximately $O(n)$ times and the per-fiber time remains almost the same).
+
+
+\includegraphics[scale=0.8]{../perf/boxplots}
+
+This boxplots shows us a more compact view over all the iterations both for kernel-space implementation and for user-space implementation fixing the number of fibers to 550.
+It shows for each implementation the quantiles (black horizontal lines), the median (yellow horizontal line) and the mean (green triangle) given from the samples we took during the iterations.
+
+From this view it possible to clearly see that, except for outliers, the majority of the kernel-implementation times are very close to the user-implementation times, so the median kernel overhead is very small.
+
 \end{document}

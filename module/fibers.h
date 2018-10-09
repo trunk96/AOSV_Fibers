@@ -70,14 +70,11 @@ struct fiber {
         //CPU context
         struct pt_regs registers; //copy of the pt_regs struct that points into the kernel level stack
         struct fpu fpu; // to replace in task_struct->struct_thread->fpu upon context switch
-        /*https://elixir.bootlin.com/linux/latest/source/arch/x86/include/asm/fpu/types.h/*/
-
 
         void *fiber_stack;
         unsigned long fiber_stack_size;
 
         long long fls[MAX_FLS_POINTERS];
-        //unsigned long fls_bitmap[FLS_BITMAP_SIZE];
         DECLARE_BITMAP(fls_bitmap, MAX_FLS_POINTERS);
 
         //some statistics...
@@ -93,10 +90,6 @@ struct fiber {
 
 
 struct process {
-        //here we have to implement an hash table to mantain all the processes
-        //that the module handles in each moment. Each struct process will
-        //be linked to a list of struct fiber that belong to that process.
-
         pid_t process_id; //key for the hashtable processes
         struct hlist_node node;
         atomic_long_t last_fiber_id;
@@ -106,12 +99,10 @@ struct process {
 };
 
 struct thread {
-
         pid_t thread_id; //key for the hashtable threads
         struct hlist_node node;
         struct process *parent;
         struct fiber *selected_fiber;
-
 };
 
 

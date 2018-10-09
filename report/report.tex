@@ -1,5 +1,26 @@
 \documentclass[a4paper]{article}
 \usepackage{listings}
+\usepackage{color}
+\usepackage{fullpage}
+\usepackage[htt]{hyphenat}
+
+
+\definecolor{mygreen}{rgb}{0,0.6,0}
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+\definecolor{mymauve}{rgb}{0.58,0,0.82}
+
+
+\lstset{ %
+  backgroundcolor=\color{white},   % choose the background color
+  basicstyle=\ttfamily,        % size of fonts used for the code
+  breaklines=true,                 % automatic line breaking only at whitespace
+  captionpos=b,                    % sets the caption-position to bottom
+  commentstyle=\color{mygreen},    % comment style
+  escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
+  keywordstyle=\color{blue},       % keyword style
+  stringstyle=\color{mymauve},     % string literal style
+}
+
 
 
 \author{\large Maria Ludovica Costagliola \\
@@ -15,40 +36,97 @@
 
 \maketitle
 \section{Introduction}
-This essay discusses the implementation of the fibers, made as final project for the \textit{Advanced operating systems and virtualization} course. Fibers corresponds to User-Level Threads, but implemented at kernel-level in Windows operating systems. Through this project, we took care of inserting this functionality inside the Linux kernel. To accomplish it, we have developed a kernel module that implements all functionalities needed to support their execution.\bigskip\\
-Fibers can be seen as a lightweight thread of execution, but, unlike threads that are scheduled by the kernel itself, they switch the execution from one fiber to another explicitly and the changes in the execution context are made by the newly implemented module.
+This essay discusses the implementation of the fibers, made as final project for the \textit{Advanced Operating Systems and Virtualization} course. Fibers corresponds to User-Level Threads and in Windows OS they are implemented at kernel-level. Through this project, we took care of inserting this functionality inside the Linux kernel. To accomplish it, we have developed a kernel module that implements all the functionalities needed to support their execution.\bigskip\\
+A Fiber can be seen as a lightweight thread of execution. Unlike usual kernel-level threads, Fibers have to explicitly yield the execution to let another fiber run.
 
-\subsection*{MODULE}
-The module implemented in \texttt{module.c} is licensed under the \textit{General Public License} and contains the main functions for initialization and exit.\bigskip\\
-When the module is loaded, it will register the device that is needed to let the paradigm of ioctl work, through \texttt{register\_fiber\_device()}, and several kprobes added to have a sound and complete implementation of the fibers.\bigskip\\
-At the unloading of the module, there is a cleanup function that takes care of unregistering all kprobes and fiber\_device.
-
-\subsection*{DEVICE}
-Inside \texttt{device.c} we registered a new character device associated to the first available major number. We needed to create a class and the device in order to make it visible to the user and accessible by every user, not just by \textit{sudo}.\bigskip\\
-The content of the device accessible through a \textit{read} is stored inside the extern variable \texttt{string\_message} and copied to the user. \texttt{string\_message} is filled inside the file \texttt{ioctl.c} with all the new seven functions that will then be possible to call.
+\subsection*{\textit{MODULE}}
+When the module is loaded, it will register the device that is needed to let the paradigm of IOCTL work, through \texttt{register\_fiber\_device()}, and several kprobes to have a sound and complete implementation of the fibers.\bigskip\\
+At the unloading of the module, there is a cleanup function that takes care of unregistering all kprobes and to remove the device file used for IOCTL.
 
 \section{Kernel Level}
-We developed the whole logic of the program at kernel level, to make accessible to the user the minimal amount of information.
+We developed the whole logic of Fibers at kernel level, to make accessible to user-level the minimal amount of information possible.
 
-\subsection*{DATA STRUCTURES}
-We use three main data structure to handle every needed variable. The \texttt{struct process} is single inside the process and initialized by the first thread that converts into a fiber: we register here the number of active threads of the process, the number of fibers created until that point, two hashtable to keep trace of all converted threads and of all fibers created by whatever thread of the process. There are also the process\_id and a \texttt{struct hlist\_node}, both needed to insert this process inside a global hashtable that contains all active processes that are using Fibers.\bigskip\\
-Each thread that wants to convert to a fiber will initialize a \texttt{struct thread} that contains thread\_id and a \texttt{struct hlist\_node} to be inserted in the hashtable of the parent process; there is a pointer to the \texttt{struct process} of its process and a pointer, that can be NULL, to the fiber that it is currently running.\bigskip\\
-Finally, the fundamental data structure is the \texttt{struct fiber}, one for each created fiber. Besides the information needed for the hashtable, there is a lock to let the threads choose a fiber to switch to in an atomic way. It is connected to the parent process and the thread that will execute it through a couple of pointers. It contains \texttt{struct pt\_regs} and \texttt{struct fpu} to perform the switch and be able to restore this fiber's execution context in the right way. Here are saved the starting address of the stack of this particular fiber and its size. To handle the FLS, we need an array to put values, one in each cell, and a bitmap to quickly find available cells inside the array. The last fields in this data structure are needed to fill a file to be shown inside the proc subsystem.
+\subsection*{\textit{DATA STRUCTURES}}
+We use three main data structure to handle Fibers and related information:
+\begin{itemize}
+  \item \texttt{struct process}
+  \item \texttt{struct thread}
+  \item \texttt{struct fiber}
+\end{itemize}
 
-\subsection*{IOCTL}
-The file \texttt{ioctl.c} comes into play each time is issued an ioctl call at user level. We have seven macros, one for each function, that are defined inside \texttt{ioctl.h} as \textbf{\_IO} and are associated each one to a different number, from 0 to 6.\bigskip\\
-The main function is \texttt{fibers\_ioctl()} where there are a series of $if$ to distinguish exactly the call made according to the macro used. If the user was supposed to pass some parameters wrapped around a struct, there are a couple of checks on this structure and it is copied inside a local structure. After these precautions, we call the real function that performs the actual operations requested by the user.\bigskip\\
-In case of a switch, we pay attention to pick up a lock right before calling the actual switch function and release it as soon as this function returns. This mechanism is used since we are in a multhithread context and only one thread at a time should perform the switch to be safe and secured.\bigskip\\
-If the user issues an ioctl call to get a value inside the fiber local storage, then it is important to make a \texttt{copy\_to\_user} with this just retrieved value.\bigskip\\
+The \texttt{struct process} is single inside the process and is initialized by the first thread of the process that converts into a fiber: we register here the number of active threads of the process, the number of fibers created until that point, two hashtable to keep trace of all converted threads and of all fibers created by whatever thread of the process. There are also the \texttt{process\_id} and a \texttt{struct hlist\_node}, both needed to insert this process inside a global hashtable that contains all active processes that are using Fibers.\bigskip\\
+
+\lstinputlisting[language=C, firstline=92, lastline=99]{../module/fibers.h}
+
+\bigskip
+
+Each thread that wants to convert to a fiber will initialize a \texttt{struct thread} that contains \texttt{thread\_id} and a \texttt{struct hlist\_node} to be inserted in the hashtable of the parent process; there is a pointer to the \texttt{struct process} of its parent process and a pointer to the fiber that it is currently running.\bigskip\\
+
+\lstinputlisting[language=C, firstline=101, lastline=106]{../module/fibers.h}
+
+\bigskip
+
+Finally, the fundamental data structure is the \texttt{struct fiber}, one for each fiber. In this struct there is a lock used serialize threads requests to switch to that fiber. There is also a pointer to the parent process and the thread that will execute the fiber. The struct contains a \texttt{struct pt\_regs} and \texttt{struct fpu} to be able to save and restore its execution context. In the struct threre are also starting address of the fiber's stack and its size. To handle FLS (\textit{Fiber Local Storage}), there is an array of fixed size \texttt{MAX\_FLS\_POINTERS}, and a bitmap to quickly find available cells inside the array. The last fields in this data structure are needed to compute some statistics to be shown inside proc subsystem.\bigskip\\
+
+\lstinputlisting[language=C, firstline=57, lastline=89]{../module/fibers.h}
+
+\bigskip
+
+\subsection*{\textit{IOCTL}}
+The file \texttt{ioctl.c} comes into play each time is issued an IOCTL call at user level. We have seven IOCTL commands, one for each functionality the module has to handle, that are defined inside \texttt{ioctl.h} and are associated to a different number, from 0 to 6.
+
+The registered function is \texttt{fibers\_ioctl()}. It checks the IOCTL command issued and calls the appropriate function to perform the desidered task. If the user was supposed to pass some parameters (wrapped in a \texttt{struct fiber\_arguments}), there is a check on this structure (to verify that the address passed is a valid address) and then it is copied inside a local structure. At the end we call the actual function that performs the task requested by the user.
+
+In case of a switch, we pay attention to take a lock right before calling the actual switch function and release it as soon as this function returns. This mechanism is used since we are in an SMP context to be safe and secured.
+
+If the user issues an IOCTL call to get a value inside the fiber local storage, then it is important to make a \texttt{copy\_to\_user} with this just retrieved value, since the user-level stub for IOCTL returns an int (to mantain compatibility with the old signature of IOCTL handler).
+
 The actual functions are implemented inside \texttt{fibers.c}.
 
-\subsection*{CONVERT A THREAD TO A FIBER}
-In order to use Fibers' logic, it's important to have a first fiber to start with. The function \texttt{convert\_thread\_to\_fiber} is called by each thread that wants to use fibers and the very first thread that calls it, has to initialize an additional data structure related to the process the threads live in.\bigskip\\
-\texttt{convert\_thread\_to\_fiber} will initialize all these structures, being aware of creating the \texttt{struct process} only if it doesn't yet exists, using a spin\_lock. 
-\subsection*{\textit{CREATE\_FIBER}}
-\subsection*{\textit{SWITCH\_TO\_FIBER}}
-\subsection*{FIBER\_LOCAL\_STORAGE}
-\subsection*{KPROBES}
+\subsection*{\textit{CONVERT A THREAD TO A FIBER}}
+In order to use Fibers' logic, it's important to have a first fiber to start with. The function \texttt{do\_ConvertThreadToFiber} is called by each thread that wants to use fibers for the first time. The very first thread in a process that calls it, has to initialize the \texttt{struct process} data structure related to the process the thread lives in.
+
+\texttt{do\_ConvertThreadToFiber} has to create the \texttt{struct process} only if it doesn't yet exists. To do so in a SMP context it uses a lock.
+
+After that it creates also a \texttt{struct thread} representing the thread and a \texttt{struct fiber} representing the first fiber for that thread.
+This ``special'' fiber uses the current value of the \texttt{rip} register as starting point and is automatically marked as run by that thread.
+
+This function returns the id of the newly created fiber.
+
+\subsection*{\textit{CREATE A NEW FIBER}}
+Using this funtionality, a thread wants to create a new fiber, assigning to that a starting address (usually a function pointer) and a parameter to be passed.
+
+In our module this functionality is implemented through \texttt{do\_CreateFiber}. This function looks for the process and the thread in the respective hashtables (if it not find even one of them, it means that the calling thread has not yet perfomed the \texttt{ConvertThreadToFiber} call).
+
+After these checks, it allocates a new \texttt{struct fiber}, computes the stack pointer using the base stack address and the stack size and adds the struct to the process's hashtable.
+
+It then returns the id of the newly created fiber.
+
+
+\subsection*{\textit{SWITCH TO A FIBER}}
+Since fibers are not preemptible, they have to yield the execution to let another fiber run. To do so our module uses the \texttt{do\_SwitchToFiber} function.
+
+This function cares to save the CPU and FPU status in the \texttt{struct fiber} related to the previous fiber and to restore the CPU and FPU context form the next \texttt{struct fiber}.
+
+It has also to reflect the switch in the control pointers both of the \texttt{struct thread} and of the \texttt{struct fiber}.
+
+\subsection*{\textit{FIBER LOCAL STORAGE}}
+Each fiber shares the address space with each other fiber and each other normal kernel thread. To let a fiber have its own local space, we implement a Fiber Local Storage as an array of \texttt{long long} of fixed size. There are 4 APIs to interact with this local storage:
+
+\begin{itemize}
+  \item \texttt{do\_FlsAlloc}
+  \item \texttt{do\_FlsSetValue}
+  \item \texttt{do\_FlsGetValue}
+  \item \texttt{do\_FlsFree}
+\end{itemize}
+
+In this way each fiber can allocate a cell, set a value for that cell, read that value and free the cell.
+To better perform these operations we used a bitmap: in this way we can find a free space in $O(\log n)$ instead of $O(n)$.
+
+Each function checks the validity of the arguments passed to be always safe.
+
+\subsection*{\texttt{KPROBES}}
+
 
 \section{User Level}
 \subsection*{IOCTL Interaction}

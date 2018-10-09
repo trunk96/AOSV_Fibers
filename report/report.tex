@@ -125,14 +125,20 @@ To better perform these operations we used a bitmap: in this way we can find a f
 
 Each function checks the validity of the arguments passed to be always safe.
 
-\subsection*{\texttt{KPROBES}}
+\subsection*{\textit{KPROBES}}
+Our module needs a kprobe to release all the memory used once a thread or the whole process die. This kprobe is executed each time \texttt{do\_exit()} is called. Since \texttt{do\_exit()} is called when the current thread is about to die, this is the right place to free all our structures regarding that thread. Moreover if the current thread is the last one in the process still executing fibers, this leads to a complete cleanup of the \texttt{struct process} and all the \texttt{struct fiber} belonging to that process.
 
+Moreover we rely on a kprobe to patch the \texttt{/proc/\{PID\}} directory to show up also the \texttt{fibers} folder only in those processes that have at least one fiber.
+
+We use a third kprobe to update fiber's execution time each time the system schedule runs.
+
+\subsection*{\textit{PROC SUBSYSTEM}}
 
 \section{User Level}
 \subsection*{IOCTL Interaction}
 \subsection*{FIBER\_LIBRARY}
 
-\section{Proc subsystem}
+
 
 \section{Performances}
 \end{document}

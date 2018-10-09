@@ -47,9 +47,9 @@ else:
 
     plt.xlabel("Iteration")
     plt.ylabel("Time (per-fiber)")
-    plt.title("A test graph")
-    plt.plot(range(1, len(l1)+1),[pt for pt in l1], marker='o', linestyle='--')
-    plt.plot(range(1, len(l2)+1),[pt2 for pt2 in l2], marker='o', linestyle='--')
+    plt.title("Execution time plot")
+    plt.plot(range(1, len(l1)+1),[pt for pt in l1], marker='o', linestyle='--', label="Kernel")
+    plt.plot(range(1, len(l2)+1),[pt2 for pt2 in l2], marker='o', linestyle='--', label="User")
     plt.legend()
     plt.show()
     plt.ylabel("Time (per-fiber)")

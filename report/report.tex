@@ -108,7 +108,7 @@ It then returns the id of the newly created fiber.
 \subsection*{\textit{SWITCH TO A FIBER}}
 Since fibers are not preemptible, they have to yield the execution to let another fiber run. To do so our module uses the \texttt{do\_SwitchToFiber} function.
 
-This function cares to save the CPU and FPU status in the \texttt{struct fiber} related to the previous fiber and to restore the CPU and FPU context form the next \texttt{struct fiber}.
+This function first checks if the selected fiber is not running (in fact if it is already running it has to fail) and cares to save the CPU and FPU status in the \texttt{struct fiber} related to the previous fiber and to restore the CPU and FPU context form the next \texttt{struct fiber}.
 
 It has also to reflect the switch in the control pointers both of the \texttt{struct thread} and of the \texttt{struct fiber}.
 
@@ -172,7 +172,7 @@ Anyway it is possible to see that kernel level implementation runs approximately
 
 \includegraphics[scale=0.8]{../perf/boxplots}
 
-This boxplots shows us a more compact view over all the iterations both for kernel-space implementation and for user-space implementation fixing the number of fibers to 550.
+These boxplots shows us a more compact view over all the iterations both for kernel-space implementation and for user-space implementation fixing the number of fibers to 550.
 It shows for each implementation the quantiles (black horizontal lines), the median (yellow horizontal line) and the mean (green triangle) given from the samples we took during the iterations.
 
 From this view it possible to clearly see that, except for outliers, the majority of the kernel-implementation times are very close to the user-implementation times, so the median kernel overhead is very small.

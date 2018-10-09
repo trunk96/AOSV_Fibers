@@ -30,6 +30,11 @@ The content of the device accessible through a \textit{read} is stored inside th
 \section{Kernel Level}
 We developed the whole logic of the program at kernel level, to make accessible to the user the minimal amount of information.
 
+\subsection*{DATA STRUCTURES}
+We use three main data structure to handle every needed variable. The \texttt{struct process} is single inside the process and initialized by the first thread that converts into a fiber: we register here the number of active threads of the process, the number of fibers created until that point, two hashtable to keep trace of all converted threads and of all fibers created by whatever thread of the process. There are also the process\_id and a \texttt{struct hlist\_node}, both needed to insert this process inside a global hashtable that contains all active processes that are using Fibers.\bigskip\\
+Each thread that wants to convert to a fiber will initialize a \texttt{struct thread} that contains thread\_id and a \texttt{struct hlist\_node} to be inserted in the hashtable of the parent process; there is a pointer to the \texttt{struct process} of its process and a pointer, that can be NULL, to the fiber that it is currently running.\bigskip\\
+Finally, the fundamental data structure is the \texttt{struct fiber}, one for each created fiber. Besides the information needed for the hashtable, there is a lock to let the threads choose a fiber to switch to in an atomic way. It is connected to the parent process and the thread that will execute it through a couple of pointers. It contains \texttt{struct pt\_regs} and \texttt{struct fpu} to perform the switch and be able to restore this fiber's execution context in the right way. Here are saved the starting address of the stack of this particular fiber and its size. To handle the FLS, we need an array to put values, one in each cell, and a bitmap to quickly find available cells inside the array. The last fields in this data structure are needed to fill a file to be shown inside the proc subsystem.
+
 \subsection*{IOCTL}
 The file \texttt{ioctl.c} comes into play each time is issued an ioctl call at user level. We have seven macros, one for each function, that are defined inside \texttt{ioctl.h} as \textbf{\_IO} and are associated each one to a different number, from 0 to 6.\bigskip\\
 The main function is \texttt{fibers\_ioctl()} where there are a series of $if$ to distinguish exactly the call made according to the macro used. If the user was supposed to pass some parameters wrapped around a struct, there are a couple of checks on this structure and it is copied inside a local structure. After these precautions, we call the real function that performs the actual operations requested by the user.\bigskip\\
@@ -37,7 +42,9 @@ In case of a switch, we pay attention to pick up a lock right before calling the
 If the user issues an ioctl call to get a value inside the fiber local storage, then it is important to make a \texttt{copy\_to\_user} with this just retrieved value.\bigskip\\
 The actual functions are implemented inside \texttt{fibers.c}.
 
-\subsection*{CONVERT A THREAD INTO A FIBER}
+\subsection*{CONVERT A THREAD TO A FIBER}
+In order to use Fibers' logic, it's important to have a first fiber to start with. The function \texttt{convert\_thread\_to\_fiber} is called by each thread that wants to use fibers and the very first thread that calls it, has to initialize an additional data structure related to the process the threads live in.\bigskip\\
+\texttt{convert\_thread\_to\_fiber} will initialize all these structures, being aware of creating the \texttt{struct process} only if it doesn't yet exists, using a spin\_lock. 
 \subsection*{\textit{CREATE\_FIBER}}
 \subsection*{\textit{SWITCH\_TO\_FIBER}}
 \subsection*{FIBER\_LOCAL\_STORAGE}
@@ -48,4 +55,6 @@ The actual functions are implemented inside \texttt{fibers.c}.
 \subsection*{FIBER\_LIBRARY}
 
 \section{Proc subsystem}
+
+\section{Performances}
 \end{document}

@@ -40,7 +40,8 @@ This essay discusses the implementation of the fibers, made as final project for
 A Fiber can be seen as a lightweight thread of execution. Unlike usual kernel-level threads, Fibers have to explicitly yield the execution to let another fiber run.
 
 \subsection*{\textit{MODULE}}
-When the module is loaded, it will register the device that is needed to let the paradigm of IOCTL work, through \texttt{register\_fiber\_device()}, and several kprobes to have a sound and complete implementation of the fibers.\bigskip\\
+When the module is loaded, it will register the device that is needed to let the paradigm of IOCTL work, through \texttt{register\_fiber\_device()}, and several kprobes to have a sound and complete implementation of the fibers.
+
 At the unloading of the module, there is a cleanup function that takes care of unregistering all kprobes and to remove the device file used for IOCTL.
 
 \section{Kernel Level}
@@ -133,10 +134,18 @@ Moreover we rely on a kprobe to patch the \texttt{/proc/\{PID\}} directory to sh
 We use a third kprobe to update fiber's execution time each time the system schedule runs.
 
 \subsection*{\textit{PROC SUBSYSTEM}}
+Each fiber stores some information needed to compute runtime statistics about its usage. These statistics are displayed in a pseudofile named with the fiber id in \texttt{/proc/\{PID\}/fibers}.
+
+\texttt{/proc/\{PID\}} has a very particular structure, different w.r.t. a normal proc directory/file. In fact all the elements appearing in \texttt{/proc/\{PID\}} are defined in a static constant array (in \texttt{/fs/proc/base.c}) named \texttt{tgid\_base\_stuff}.
+To add the folder \texttt{fibers} to \texttt{/proc/\{PID\}}, we had to modify the behaviour of the \texttt{iterate\_shared} handler (in this case \texttt{proc\_tgid\_base\_readdir}) and the \texttt{lookup} handler (in this case \texttt{proc\_tgid\_base\_lookup}). We did it using two kretprobes.
+
+We examine the case of the \texttt{iterate\_shared} since the other one uses almost the same approach. In this case we compute once (as soon as the kretprobe is fired for the first time) the number of entries added by the actual \texttt{proc\_pident\_readdir}, called by \texttt{proc\_tgid\_base\_readdir}, and then we call again \texttt{proc\_pident\_readdir} to insert an ad-hoc array containing only the \texttt{fibers} entry. In this way the inode for our entry is instanciated exactly like the ones corresponding to the actual entries of \texttt{tgid\_base\_stuff} and the \texttt{dir\_context} is update accordingly.
+
+To show under \texttt{/proc/\{PID\}/fibers} all the pseudofiles corresponding to the fiber instanciated in that process, we used the same approach of \texttt{tgid\_base\_stuff} and \texttt{proc\_pident\_readdir}, but this time the array is not a static constant array, but it is dynamically generated based on the fibers present in the process.
+
+Each of these files has the same \texttt{read} handler, that extract information from its argument \texttt{struct file}, to understand which fiber's information outputs to user-level.
 
 \section{User Level}
-\subsection*{IOCTL Interaction}
-\subsection*{FIBER\_LIBRARY}
 
 
 

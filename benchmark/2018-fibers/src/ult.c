@@ -34,13 +34,13 @@ static bool ult_trylock(ult_t *ctx) {
 }
 
 // Lock: we are sure that the fiber is free, so we lock it
-static void ult_lock(ult_t *ctx) {  
+static void ult_lock(ult_t *ctx) {
 	volatile bool *pFlag = &ctx->running;
 	for (;;) {
 		if (!__atomic_test_and_set(pFlag, __ATOMIC_ACQUIRE)) {
 			return;
 		}
-        
+
 		while (__atomic_load_n(pFlag, __ATOMIC_RELAXED)) {
 			cpu_relax();
 		}
@@ -85,10 +85,10 @@ static void context_create_boot(void) {
 
 	context_start_func = context_creat_func;
 	context_start_arg = context_creat_arg;
-	
+
 	ult_lock(current); // Locking is demanded to outer code
 	context_switch(context_creat, current);
-	
+
 	context_start_func(context_start_arg);
 
 	// you should never reach this!
@@ -125,7 +125,7 @@ void context_create(ult_t *context, void (*entry_point)(void *), void *args, voi
 	ss.ss_size = stack_size;
 	ss.ss_flags = 0;
 	if(sigaltstack(&ss, &oss) == -1) {
-		fprintf(stderr, "Critical error: cannot initialize a separate stack\n");
+		//fprintf(stderr, "Critical error: cannot initialize a separate stack\n");
 	}
 
 	context_creat = context;
@@ -134,11 +134,11 @@ void context_create(ult_t *context, void (*entry_point)(void *), void *args, voi
 	context_called = false;
 	raise(SIGUSR1);
 	if(sigaltstack(&oss, NULL) == -1)  {
-		fprintf(stderr, "Critical error: cannot initialize a separate stack\n");
+		//fprintf(stderr, "Critical error: cannot initialize a separate stack\n");
 	}
 
 	context_switch_create(current, context);
-}	
+}
 
 // Simplistic allocation for FLS
 long fls_alloc(void) {
@@ -177,7 +177,7 @@ void *ult_convert(void) {
 	ctx->context = malloc(sizeof(exec_context_t));
 	bzero(ctx->context, sizeof(exec_context_t));
 	context_save(ctx->context);
-	
+
 	current = ctx;
 	return ctx;
 }
@@ -189,16 +189,16 @@ void *ult_creat(size_t stack_size, void (*entry_point)(void *), void *args) {
 	void *stack = NULL;
 
 	stack = get_ult_stack(stack_size);
-	
+
 	ctx = malloc(sizeof(ult_t));
 	bzero(ctx, sizeof(ult_t));
 
 	ctx->id = __sync_fetch_and_add(&ult_id, 1);
-	printf("Created fiber with id %d\n", ctx->id);
-	
+	//printf("Created fiber with id %d\n", ctx->id);
+
 	ctx->context = malloc(sizeof(exec_context_t));
 	bzero(ctx->context, sizeof(exec_context_t));
-	
+
 	context_create(ctx, entry_point, args, stack, stack_size);
 	return ctx;
 }
@@ -207,15 +207,15 @@ void *ult_creat(size_t stack_size, void (*entry_point)(void *), void *args) {
 void ult_switch_to(void *ult) {
 	ult_t *from = current;
 	ult_t *to = (ult_t *)ult;
-	
+
 	if(!to || !ult_trylock(to))
 		return;
-	
+
 	if(completed_fibers > 0)
-		printf("Thread %d switching to fiber %d...", tid, to->id);
+		//printf("Thread %d switching to fiber %d...", tid, to->id);
 	current = to;
 	if(completed_fibers > 0)
-		puts("done.");
-	
+		//puts("done.");
+
 	context_switch(from, to);
 }

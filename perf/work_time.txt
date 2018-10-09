@@ -1,0 +1,15 @@
+Time to run do the work (per-fiber): 0.379005
+Time to run do the work (per-fiber): 0.377127
+Time to run do the work (per-fiber): 0.379638
+Time to run do the work (per-fiber): 0.376776
+Time to run do the work (per-fiber): 0.398162
+Time to run do the work (per-fiber): 0.407815
+Time to run do the work (per-fiber): 0.406816
+Time to run do the work (per-fiber): 0.410322
+Time to run do the work (per-fiber): 0.407100
+Time to run do the work (per-fiber): 0.407336
+Time to run do the work (per-fiber): 0.406962
+Time to run do the work (per-fiber): 0.409556
+Time to run do the work (per-fiber): 0.434044
+Time to run do the work (per-fiber): 0.407782
+Time to run do the work (per-fiber): 0.416371

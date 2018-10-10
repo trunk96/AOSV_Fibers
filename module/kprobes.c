@@ -53,12 +53,6 @@ int unregister_kretprobe_proc_fiber_dir(void)
 }
 
 
-int dummy_fnct(struct kretprobe_instance *ri, struct pt_regs *regs)
-{
-				return 0;
-}
-
-
 int entry_proc_insert_dir(struct kretprobe_instance *k, struct pt_regs *regs)
 {
 				//take first 2 parameters of proc_tgid_base_readdir

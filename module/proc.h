@@ -38,8 +38,6 @@ struct proc_inode {
 
 
 ssize_t proc_fiber_read(struct file *, char __user *, size_t, loff_t *);
-int proc_fiber_init(struct process *);
-void proc_fiber_exit(struct process *);
 int proc_fiber_base_readdir(struct file *, struct dir_context *);
 struct dentry *proc_fiber_base_lookup(struct inode *, struct dentry *, unsigned int);
 
@@ -52,12 +50,6 @@ static inline struct pid *proc_pid(struct inode *inode)
 {
 				return PROC_I(inode)->pid;
 }
-
-
-
-typedef int (*proc_readdir_de_t)(struct file *, struct dir_context *, struct proc_dir_entry *);
-typedef struct proc_dir_entry *(*__proc_create_t)(struct proc_dir_entry **, const char *, umode_t, nlink_t);
-typedef struct dentry *(*proc_lookup_de_t)(struct inode *, struct dentry *, struct proc_dir_entry *);
 
 struct process * get_proc_process_fiber(struct inode *dir){
 				struct task_struct *task;

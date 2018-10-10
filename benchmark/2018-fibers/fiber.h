@@ -1,6 +1,6 @@
 #pragma once
 
-#define USERSPACE
+#define USERSPACE1
 
 #ifdef USERSPACE
 

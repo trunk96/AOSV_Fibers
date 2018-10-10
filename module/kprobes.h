@@ -11,7 +11,6 @@
 
 extern int proc_fiber_base_readdir(struct file *, struct dir_context *);
 extern struct dentry *proc_fiber_base_lookup(struct inode *, struct dentry *, unsigned int);
-extern void proc_fiber_exit(struct process *);
 
 
 #define NOD(NAME, MODE, IOP, FOP, OP) {     \
@@ -83,7 +82,6 @@ extern void do_exit(long);
 
 int exit_cleanup(struct kprobe *, struct pt_regs *);
 int fiber_timer(struct kretprobe_instance *, struct pt_regs *);
-int dummy_fnct(struct kretprobe_instance *, struct pt_regs *);
 int proc_insert_dir(struct kretprobe_instance *, struct pt_regs *);
 int entry_proc_insert_dir(struct kretprobe_instance *, struct pt_regs *);
 

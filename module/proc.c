@@ -75,7 +75,7 @@ struct dentry *proc_fiber_base_lookup(struct inode *dir, struct dentry *dentry, 
 								counter++;
 				}
 
-				//here we have the array, so we can call again readdir to show them into /proc/{PID}/fibers
+				//here we have the array, so we can call again lookup to show them into /proc/{PID}/fibers
 				ret = look(dir, dentry, fiber_base_stuff, nents);
 				kfree(fiber_base_stuff);
 				return ret;
@@ -86,7 +86,7 @@ struct dentry *proc_fiber_base_lookup(struct inode *dir, struct dentry *dentry, 
 
 ssize_t proc_fiber_read(struct file *filp, char __user *buf, size_t len, loff_t *off){
 				//build the string
-				char string_abc[PROC_STAT_LEN] = "";
+				char proc_stat_string[PROC_STAT_LEN] = "";
 				struct process *ep;
 				struct fiber *fp;
 				size_t i;
@@ -106,14 +106,14 @@ ssize_t proc_fiber_read(struct file *filp, char __user *buf, size_t len, loff_t 
 				if (fp == NULL)
 								return 0;
 
-				snprintf(string_abc, PROC_STAT_LEN, "Currently Ongoing: %s\nStart Address: %lu\nCreator thread: %d\n# of current activations: %lu\n# of failed activations: %lu\nTotal execution time in user space: %lu\n",
+				snprintf(proc_stat_string, PROC_STAT_LEN, "Currently Ongoing: %s\nStart Address: %lu\nCreator thread: %d\n# of current activations: %lu\n# of failed activations: %lu\nTotal execution time in user space: %lu\n",
 								(fp->attached_thread == NULL) ? "no" : "yes", (unsigned long)fp->start_address, fp->creator_thread, fp->activation_counter, atomic64_read(&(fp->failed_activation_counter)), fp->total_time/1000000000);
 
 
-				if (*off >= strnlen(string_abc, PROC_STAT_LEN))
+				if (*off >= strnlen(proc_stat_string, PROC_STAT_LEN))
 								return 0;
-				i = min_t(size_t, len, strnlen(string_abc, PROC_STAT_LEN));
-				if (copy_to_user(buf, string_abc, i)) {
+				i = min_t(size_t, len, strnlen(proc_stat_string, PROC_STAT_LEN));
+				if (copy_to_user(buf, proc_stat_string, i)) {
 							return -EFAULT;
 				}
 				*off += i;

@@ -34,16 +34,12 @@ __attribute__((destructor)) void close_fiberlib()
 
 pid_t ConvertThreadToFiber()
 {
-        if (!fiberlib_initialized)
-                fiberlib_init();
         return (pid_t) ioctl(fd, ioctl_numbers[IOCTL_CONVERT_THREAD_TO_FIBER], 0);
 }
 
 
 pid_t CreateFiber(user_function_t function_pointer, unsigned long stack_size, void *parameters)
 {
-        if (!fiberlib_initialized)
-                fiberlib_init();
         struct fiber_arguments f = {
                 .stack_size = stack_size,
                 .start_function_address = function_pointer,
@@ -57,8 +53,6 @@ pid_t CreateFiber(user_function_t function_pointer, unsigned long stack_size, vo
 
 long SwitchToFiber(pid_t fiber_id)
 {
-        if (!fiberlib_initialized)
-                fiberlib_init();
         struct fiber_arguments f = {
                 .fiber_id = fiber_id,
         };
@@ -68,16 +62,12 @@ long SwitchToFiber(pid_t fiber_id)
 
 long FlsAlloc()
 {
-        if (!fiberlib_initialized)
-                fiberlib_init();
         return ioctl(fd, ioctl_numbers[IOCTL_FLS_ALLOC], 0);
 }
 
 
 bool FlsFree(long index)
 {
-        if (!fiberlib_initialized)
-                fiberlib_init();
         struct fiber_arguments f = {
                 .index = index,
         };
@@ -87,8 +77,6 @@ bool FlsFree(long index)
 
 void FlsSetValue(long long buffer, long index)
 {
-        if (!fiberlib_initialized)
-                fiberlib_init();
         struct fiber_arguments f = {
                 .index = index,
                 .buffer = buffer,
@@ -99,8 +87,6 @@ void FlsSetValue(long long buffer, long index)
 
 long long FlsGetValue(long index)
 {
-        if (!fiberlib_initialized)
-                fiberlib_init();
         long long a = 0;
         struct fiber_arguments f = {
                 .index = index,

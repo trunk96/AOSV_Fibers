@@ -20,7 +20,7 @@ void publish_ioctl_message()
                  IOCTL_FLS_SETVALUE);
 }
 
-spinlock_t big_lock = __SPIN_LOCK_UNLOCKED(big_lock);
+spinlock_t switch_lock = __SPIN_LOCK_UNLOCKED(switch_lock);
 
 static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
 {
@@ -60,11 +60,11 @@ static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
                         return -EFAULT;
                 }
 
-                spin_lock_irqsave(&big_lock, flags);
+                spin_lock_irqsave(&switch_lock, flags);
 
                 ret = do_SwitchToFiber(fa.fiber_id, thread_id);
 
-                spin_unlock_irqrestore(&big_lock, flags);
+                spin_unlock_irqrestore(&switch_lock, flags);
                 return ret;
         }
         else if (cmd == IOCTL_FLS_ALLOC) {

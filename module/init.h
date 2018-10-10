@@ -22,7 +22,6 @@
         f->fiber_lock = __SPIN_LOCK_UNLOCKED(fiber_lock);        \
         f->attached_thread = NULL;                \
         f->parent_process = parent;       \
-        memset((char*)&(f->fpu), 0, sizeof(struct fpu));    \
         memset(f->fls, 0, sizeof(long long)*MAX_FLS_POINTERS);                 \
         bitmap_zero(f->fls_bitmap, MAX_FLS_POINTERS);  \
         memcpy(&f->registers, task_pt_regs(current), sizeof(struct pt_regs)); \
@@ -36,9 +35,6 @@
         f->creator_thread = current->pid;                             \
         f->activation_counter = 0;                                    \
         atomic64_set(&(f->failed_activation_counter), 0);             \
-        f->fiber_info.fiber_id = f->fiber_id;                         \
-        f->fiber_info.process_id = f->parent_process->process_id;             \
-        f->fpu.initialized = 1; \
         copy_fxregs_to_kernel(&(f->fpu));                             \
         f->total_time = 0;  \
         f->prev_time = 0; \

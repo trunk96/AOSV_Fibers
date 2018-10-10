@@ -36,7 +36,6 @@ struct fiber_arguments {
         pid_t fiber_id;
         unsigned long index;
         unsigned long buffer;
-        unsigned long alloc_size;
 };
 
 #endif

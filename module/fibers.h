@@ -14,12 +14,6 @@
 
 typedef void (*user_function_t)(void *param);
 
-struct proc_info {
-        int fiber_id;
-        int process_id;
-};
-
-
 union proc_op {
 								int (*proc_get_link)(struct dentry *, struct path *);
 								int (*proc_show)(struct seq_file *m, struct pid_namespace *ns, struct pid *pid, struct task_struct *task);
@@ -44,14 +38,8 @@ struct fiber_arguments {
         void *start_function_arguments;
         pid_t fiber_id;
         long index;
-        long long buffer; //used both to get an element and to set an element
+        long long buffer;
 };
-
-
-/*struct fls_data {
-        void *fls_data;
-        unsigned long size; //in bytes;
-};*/
 
 
 struct fiber {
@@ -84,7 +72,6 @@ struct fiber {
         atomic_long_t failed_activation_counter;
         unsigned long prev_time;
         unsigned long total_time;
-        struct proc_info fiber_info;
 
 };
 
@@ -120,7 +107,6 @@ struct thread * find_thread_by_pid(pid_t, struct process *);
 struct fiber * find_fiber_by_id(pid_t, struct process *);
 
 
-//extern int proc_fiber_open(struct inode *, struct file *);
 extern ssize_t proc_fiber_read(struct file *, char __user *, size_t, loff_t *);
 extern int proc_fiber_init(struct process *);
 extern void proc_fiber_exit(struct process *);

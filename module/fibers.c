@@ -300,3 +300,27 @@ void do_FlsSetValue(long index, long long value, pid_t thread_id)
 
         return;
 }
+
+
+
+int process_cleanup(){
+  //this function removes all the current process's structures
+  struct process *p = find_process_by_tgid(current->tgid);
+  struct thread *t;
+  struct fiber *f;
+  int i;
+
+
+  if (p == NULL) {
+          return 0;
+  }
+  hash_for_each_rcu(p->threads, i, t, node){
+    kfree(t);
+  }
+  hash_for_each_rcu(p->fibers, i, f, node){
+    kfree(f);
+  }
+  hash_del_rcu(&(p->node));
+  kfree(p);
+  return 0;
+}

@@ -19,10 +19,27 @@ static ssize_t fibers_read(struct file *f, char __user *buf, size_t len, loff_t 
 
 }
 
+int fiber_open(struct inode *inode, struct file *file)
+{
+		if (!try_module_get(THIS_MODULE)){
+			return -1;
+		}
+		return 0;
+}
+
+int fiber_close(struct inode *inode, struct file *file)
+{
+	process_cleanup();
+	module_put(THIS_MODULE);
+	return 0;
+}
+
 
 static struct file_operations fibers_fops = {
         .read = fibers_read,
         //.unlocked_ioctl = ioctl_function    ioctl_function is not constant, so we have to add it later
+				.open = fiber_open,
+				.release = fiber_close,
 };
 
 static char *fiber_user_devnode(struct device *dev, umode_t *mode)

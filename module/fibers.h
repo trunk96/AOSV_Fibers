@@ -100,6 +100,7 @@ long do_FlsAlloc(pid_t);
 bool do_FlsFree(long, pid_t);
 long long do_FlsGetValue(long, pid_t);
 void do_FlsSetValue(long, long long, pid_t);
+int process_cleanup(void);
 
 
 struct process * find_process_by_tgid(pid_t);

@@ -13,3 +13,4 @@ void unregister_fiber_device(void);
 extern char string_message[MESSAGE_MAX_LEN];
 extern long (*ioctl_function)(struct file *, unsigned int, unsigned long);
 extern void (*publish_message)(void);
+extern int process_cleanup(void);

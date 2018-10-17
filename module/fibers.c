@@ -78,8 +78,8 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
         struct thread *gp;
         struct fiber *fp;
 
-		    //Check if struct process already exists in an atomic way
-		    spin_lock_irqsave(&(struct_process_lock), struct_process_flags);
+        //Check if struct process already exists in an atomic way
+        spin_lock_irqsave(&(struct_process_lock), struct_process_flags);
         ep = find_process_by_tgid(current->tgid);
         if (ep == NULL) {
                 init_process(ep, processes);
@@ -161,7 +161,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         if (f == NULL)
                 return -1;
 
-        if (f->attached_thread != NULL){
+        if (f->attached_thread != NULL) {
                 atomic64_inc(&(f->failed_activation_counter));
                 return -1;
         }
@@ -217,8 +217,8 @@ long do_FlsAlloc(pid_t thread_id)
         index = find_first_zero_bit(f->fls_bitmap, MAX_FLS_POINTERS);
         if (index == MAX_FLS_POINTERS)
         {
-          printk(KERN_DEBUG "%s: FlsAlloc has no index free for fiber %d, PID %d\n", KBUILD_MODNAME, f->fiber_id, f->parent_process->process_id);
-          return -1;
+                printk(KERN_DEBUG "%s: FlsAlloc has no index free for fiber %d, PID %d\n", KBUILD_MODNAME, f->fiber_id, f->parent_process->process_id);
+                return -1;
         }
 
         change_bit(index, f->fls_bitmap);
@@ -304,23 +304,23 @@ void do_FlsSetValue(long index, long long value, pid_t thread_id)
 
 
 int process_cleanup(){
-  //this function removes all the current process's structures
-  struct process *p = find_process_by_tgid(current->tgid);
-  struct thread *t;
-  struct fiber *f;
-  int i;
+        //this function removes all the current process's structures
+        struct process *p = find_process_by_tgid(current->tgid);
+        struct thread *t;
+        struct fiber *f;
+        int i;
 
 
-  if (p == NULL) {
-          return 0;
-  }
-  hash_for_each_rcu(p->threads, i, t, node){
-    kfree(t);
-  }
-  hash_for_each_rcu(p->fibers, i, f, node){
-    kfree(f);
-  }
-  hash_del_rcu(&(p->node));
-  kfree(p);
-  return 0;
+        if (p == NULL) {
+                return 0;
+        }
+        hash_for_each_rcu(p->threads, i, t, node){
+                kfree(t);
+        }
+        hash_for_each_rcu(p->fibers, i, f, node){
+                kfree(f);
+        }
+        hash_del_rcu(&(p->node));
+        kfree(p);
+        return 0;
 }

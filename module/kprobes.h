@@ -51,6 +51,11 @@ static inline struct pid *proc_pid(struct inode *inode)
 				return PROC_I(inode)->pid;
 }
 
+static inline struct task_struct *get_proc_task(struct inode *inode)
+{
+	return get_pid_task(proc_pid(inode), PIDTYPE_PID);
+}
+
 
 
 struct file_operations file_ops = {
@@ -73,6 +78,10 @@ struct tgid_dir_data {
 				struct file *file;
 				struct dir_context *ctx;
 };
+struct tgid_lookup_data{
+				struct dentry *dentry;
+				struct inode *inode;
+};
 
 extern struct hlist_head processes;
 extern struct process * find_process_by_tgid(pid_t);
@@ -84,6 +93,8 @@ int exit_cleanup(struct kprobe *, struct pt_regs *);
 int fiber_timer(struct kretprobe_instance *, struct pt_regs *);
 int proc_insert_dir(struct kretprobe_instance *, struct pt_regs *);
 int entry_proc_insert_dir(struct kretprobe_instance *, struct pt_regs *);
+int proc_lookup_dir(struct kretprobe_instance *k, struct pt_regs *regs);
+int entry_proc_lookup_dir(struct kretprobe_instance *k, struct pt_regs *regs);
 
 typedef int (*proc_pident_readdir_t)(struct file *file, struct dir_context *ctx, const struct pid_entry *ents, unsigned int nents);
 typedef struct dentry * (*proc_pident_lookup_t)(struct inode *dir, struct dentry *dentry, const struct pid_entry *ents, unsigned int nents);
@@ -105,3 +116,4 @@ int nents = 0;
 struct kprobe do_exit_kp;
 struct kretprobe finish_task_switch_krp;
 struct kretprobe proc_readdir_krp;
+struct kretprobe proc_lookup_krp;

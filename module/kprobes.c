@@ -40,7 +40,12 @@ int register_kretprobe_proc_fiber_dir(void)
 				proc_readdir_krp.handler = proc_insert_dir;
 				proc_readdir_krp.data_size = sizeof(struct tgid_dir_data);
 				proc_readdir_krp.kp.symbol_name = "proc_tgid_base_readdir";
+				proc_lookup_krp.entry_handler = entry_proc_lookup_dir;
+				proc_lookup_krp.handler = proc_lookup_dir;
+				proc_lookup_krp.data_size = sizeof(struct tgid_lookup_data);
+				proc_lookup_krp.kp.symbol_name = "proc_tgid_base_lookup";
 				register_kretprobe(&proc_readdir_krp);
+				register_kretprobe(&proc_lookup_krp);
 				inode_ops.getattr = getattr;
 				inode_ops.setattr = setattr;
 				return 0;
@@ -49,7 +54,45 @@ int register_kretprobe_proc_fiber_dir(void)
 int unregister_kretprobe_proc_fiber_dir(void)
 {
 				unregister_kretprobe(&proc_readdir_krp);
+				unregister_kretprobe(&proc_lookup_krp);
 				return 0;
+}
+
+int entry_proc_lookup_dir(struct kretprobe_instance *k, struct pt_regs *regs)
+{
+	//take first 2 parameters of proc_tgid_base_lookup
+	struct inode *inode = (struct inode *) regs->di;
+	struct dentry *dentry = (struct dentry *) regs->si;
+	struct tgid_lookup_data data;
+	data.inode = inode;
+	data.dentry = dentry;
+	memcpy(k->data, &data, sizeof(struct tgid_lookup_data));
+	return 0;
+}
+
+
+int proc_lookup_dir(struct kretprobe_instance *k, struct pt_regs *regs)
+{
+	//we have to insert "fibers" directory only in a fiberized process
+	struct tgid_lookup_data *data = (struct tgid_lookup_data *)(k->data);
+	struct process *p;
+	unsigned long flags;
+	unsigned int pos;
+	struct task_struct * task = get_proc_task(data->inode);
+
+	p = find_process_by_tgid(task->tgid);
+	if (p == NULL)
+					return 0;
+
+	//we are in a fiberized process, so please add "fibers" directory
+
+	if (nents == 0) {
+					return 0;
+	}
+	pos = nents;
+	look(data->inode, data->dentry, additional - (pos - 2), pos - 1);
+
+	return 0;
 }
 
 
@@ -76,20 +119,21 @@ int proc_insert_dir(struct kretprobe_instance *k, struct pt_regs *regs)
 				unsigned int pos;
 				struct task_struct * task = get_pid_task(proc_pid(file_inode(data->file)), PIDTYPE_PID);
 
-				p = find_process_by_tgid(task->tgid);
-				if (p == NULL)
-								return 0;
-
-				//we are in a fiberized process, so please add "fibers" directory
-
 				if (nents == 0) {
 								spin_lock_irqsave(&check_nents, flags);
 								if (nents == 0)
 												nents = data->ctx->pos;
 								spin_unlock_irqrestore(&check_nents, flags);
 				}
+
+				p = find_process_by_tgid(task->tgid);
+				if (p == NULL)
+								return 0;
+
+				//we are in a fiberized process, so please add "fibers" directory
+
 				pos = nents;
-				readdir(data->file, data->ctx, additional -(pos - 2), pos - 1);
+				readdir(data->file, data->ctx, additional - (pos - 2), pos - 1);
 				return 0;
 }
 

@@ -86,9 +86,10 @@ int proc_lookup_dir(struct kretprobe_instance *k, struct pt_regs *regs)
 
 	//we are in a fiberized process, so please add "fibers" directory
 
-	if (nents == 0) {
-					return 0;
-	}
+	if (nents == 0)
+					return 0; //readdir has to be called first, otherwise we cannot know the size of tgid_base_stuff
+
+	//if we have nents!=0 then readdir was called before us and has setted nents to the size of tgid_base_stuff
 	pos = nents;
 	look(data->inode, data->dentry, additional - (pos - 2), pos - 1);
 
@@ -197,9 +198,6 @@ DEFINE_PER_CPU(struct task_struct *, prev_task) = NULL;
 
 int fiber_timer(struct kretprobe_instance *ri, struct pt_regs *regs)
 {
-				struct process *next_p;
-				struct thread *next_th;
-				struct fiber *next_f;
 				struct process *prev_p;
 				struct thread *prev_th;
 				struct fiber *prev_f;
@@ -208,51 +206,34 @@ int fiber_timer(struct kretprobe_instance *ri, struct pt_regs *regs)
 				prev = get_cpu_var(prev_task);
 
 				if (prev == NULL){
-								printk(KERN_DEBUG "%s: prev is NULL\n", KBUILD_MODNAME);
 								put_cpu_var(prev_task);
-								goto end;
+								goto end_not_our_fiber;
 				}
-				printk(KERN_DEBUG "%s: ID is %d, prev is %d AND current is %d\n", KBUILD_MODNAME, smp_processor_id(), prev->tgid, current->tgid);
+
 				prev_p = find_process_by_tgid(prev->tgid);
+
 				if (prev_p == NULL){
 								put_cpu_var(prev_task);
-								goto end;
+								goto end_not_our_fiber;
 				}
 
 				prev_th = find_thread_by_pid(prev->pid, prev_p);
 
 
 				if (prev_th == NULL)
-								goto end;
+								goto end_not_our_fiber;
 
 				prev_f = prev_th->selected_fiber;
 				if (prev_f == NULL)
-								goto end;
+								goto end_not_our_fiber;
 
 				prev_f->total_time += prev->utime;
 
 				put_cpu_var(prev_task);
 
-end:
-			/*	next_p = find_process_by_tgid(current->tgid);
-				if (next_p == NULL)
-								goto end_not_our_fiber;
-
-				next_th = find_thread_by_pid(current->pid, next_p);
-				if (next_th == NULL)
-								goto end_not_our_fiber;
-
-				next_f = next_th->selected_fiber;
-				if (next_f == NULL)
-								goto end_not_our_fiber;
-
-				next_f->prev_time = current->utime;
-
-*/
 
 end_not_our_fiber:
 				prev = get_cpu_var(prev_task);
-				//prev_task = current;
 				this_cpu_write(prev_task, current);
 				put_cpu_var(prev_task);
 				return 0;

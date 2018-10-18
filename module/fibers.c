@@ -102,7 +102,6 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
         //this line to override the behaviour of init_fiber
         fp->activation_counter++;
 
-        //fp->prev_time = current->utime;
 
         fp->attached_thread = gp;
         gp->selected_fiber = fp;
@@ -173,7 +172,6 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
 
         prev_fiber->total_time += current->utime;
 
-        //f->prev_time = current->utime;
 
         //save previous CPU registers in the previous fiber
         prev_regs = task_pt_regs(current);

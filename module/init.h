@@ -37,6 +37,5 @@
         atomic64_set(&(f->failed_activation_counter), 0);             \
         copy_fxregs_to_kernel(&(f->fpu));                             \
         f->total_time = 0;  \
-        /*f->prev_time = 0; */\
         snprintf(f->name, 256, "%d", f->fiber_id);                    \
 } while(0)

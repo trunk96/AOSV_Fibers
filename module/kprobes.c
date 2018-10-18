@@ -1,5 +1,5 @@
 #include "kprobes.h"
-
+#include <linux/smp.h>
 
 int register_kprobe_do_exit(void)
 {
@@ -76,7 +76,7 @@ int proc_lookup_dir(struct kretprobe_instance *k, struct pt_regs *regs)
 	//we have to insert "fibers" directory only in a fiberized process
 	struct tgid_lookup_data *data = (struct tgid_lookup_data *)(k->data);
 	struct process *p;
-	unsigned long flags;
+	//unsigned long flags;
 	unsigned int pos;
 	struct task_struct * task = get_proc_task(data->inode);
 
@@ -208,10 +208,11 @@ int fiber_timer(struct kretprobe_instance *ri, struct pt_regs *regs)
 				prev = get_cpu_var(prev_task);
 
 				if (prev == NULL){
+								printk(KERN_DEBUG "%s: prev is NULL\n", KBUILD_MODNAME);
 								put_cpu_var(prev_task);
 								goto end;
 				}
-
+				printk(KERN_DEBUG "%s: ID is %d, prev is %d AND current is %d\n", KBUILD_MODNAME, smp_processor_id(), prev->tgid, current->tgid);
 				prev_p = find_process_by_tgid(prev->tgid);
 				if (prev_p == NULL){
 								put_cpu_var(prev_task);
@@ -233,7 +234,7 @@ int fiber_timer(struct kretprobe_instance *ri, struct pt_regs *regs)
 				put_cpu_var(prev_task);
 
 end:
-				next_p = find_process_by_tgid(current->tgid);
+			/*	next_p = find_process_by_tgid(current->tgid);
 				if (next_p == NULL)
 								goto end_not_our_fiber;
 
@@ -247,11 +248,12 @@ end:
 
 				next_f->prev_time = current->utime;
 
-
+*/
 
 end_not_our_fiber:
 				prev = get_cpu_var(prev_task);
-				prev = current;
+				//prev_task = current;
+				this_cpu_write(prev_task, current);
 				put_cpu_var(prev_task);
 				return 0;
 }

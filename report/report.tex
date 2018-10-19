@@ -56,13 +56,13 @@ We used three main data structures to handle Fibers and related information:
 \end{itemize}
 The \texttt{struct process} is unique inside the process and is initialized by the first thread of the process that converts to a fiber: we register here the number of active threads of the process, the number of fibers created until that point, two hashtables to keep trace of all converted threads and of all fibers created by whatever thread of the process. There are also the \texttt{process\_id} and a \texttt{struct hlist\_node}, both needed to insert this process inside a global hashtable that contains all active processes that are using Fibers.\bigskip\\
 
-\lstinputlisting[language=C, firstline=92, lastline=99]{../module/fibers.h}\bigskip
+\lstinputlisting[language=C, firstline=78, lastline=85]{../module/fibers.h}\bigskip
 Each thread that wants to convert to a fiber will initialize a \texttt{struct thread} that contains \texttt{thread\_id} and a \texttt{struct hlist\_node} to be inserted in the hashtable of the parent process; there is a pointer to the \texttt{struct process} of its parent process and a pointer to the fiber that it is currently running.\bigskip\\
 
-\lstinputlisting[language=C, firstline=101, lastline=106]{../module/fibers.h}\bigskip
+\lstinputlisting[language=C, firstline=87, lastline=92]{../module/fibers.h}\bigskip
 Finally, the fundamental data structure is the \texttt{struct fiber}, one for each fiber. In this struct there is a lock used to serialize threads requests to switch to that fiber. There is also a pointer to the parent process and the thread executing this fiber. The struct contains a \texttt{struct pt\_regs} and \texttt{struct fpu} to be able to save and restore its execution context. In the struct there are also starting address of the fiber's stack and its size. To handle FLS (\textit{Fiber Local Storage}), there is an array of fixed size \texttt{MAX\_FLS\_POINTERS}, and a bitmap to quickly find available cells inside the array. The last fields in this data structure are needed to compute some statistics to be shown inside proc subsystem.\bigskip\\
 
-\lstinputlisting[language=C, firstline=57, lastline=89]{../module/fibers.h}
+\lstinputlisting[language=C, firstline=45, lastline=75]{../module/fibers.h}
 
 \subsection*{\textit{IOCTL}}
 The file \texttt{ioctl.c} comes into play each time is issued an IOCTL call at user level. We have seven IOCTL commands, one for each functionality the module has to handle, that are defined inside \texttt{ioctl.h} and are associated to a different number, from 0 to 6.\bigskip\\
@@ -104,7 +104,7 @@ Each function checks the validity of the arguments passed to be always safe.
 
 \subsection*{\textit{KPROBES}}
 Our module needs a kprobe to release all the memory used once a thread or the whole process die. This kprobe is executed each time \texttt{do\_exit()} is called. Since \texttt{do\_exit()} is called when the current thread is about to die, this is the right place to free all our structures regarding that thread. Moreover, if the current thread is the last one in the process still executing fibers, this leads to a complete cleanup of all \texttt{struct fiber} belonging to that process and the \texttt{struct process} itself.\bigskip\\
-We also rely on a kprobe to patch the \texttt{/proc/\{PID\}} directory to show up also the \texttt{fibers} folder only in those processes that have at least one fiber.\bigskip\\
+We also rely on kprobes to patch the \texttt{/proc/\{PID\}} directory to show up also the \texttt{fibers} folder only in those processes that have at least one fiber.\bigskip\\
 We use a third kprobe to update fiber's execution time whenever the system schedule runs.
 
 \subsection*{\textit{PROC SUBSYSTEM}}

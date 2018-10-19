@@ -1,4 +1,5 @@
 #include "proc.h"
+#include <linux/version.h>
 
 
 int proc_fiber_base_readdir(struct file *file, struct dir_context *ctx){
@@ -106,9 +107,17 @@ ssize_t proc_fiber_read(struct file *filp, char __user *buf, size_t len, loff_t 
 				if (fp == NULL)
 								return 0;
 
-				snprintf(proc_stat_string, PROC_STAT_LEN, "Currently Ongoing: %s\nStart Address: 0x%016lx\nCreator thread: %d\n# of current activations: %lu\n# of failed activations: %lu\nTotal execution time in user space: %lu\n",
+
+				#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,18,0)
+
+				snprintf(proc_stat_string, PROC_STAT_LEN, "Currently Ongoing: %s\nStart Address: 0x%016lx\nCreator thread: %d\n# of current activations: %lu\n# of failed activations: %lld\nTotal execution time in user space: %lu\n",
+								(fp->attached_thread == NULL) ? "no" : "yes", (unsigned long)fp->start_address, fp->creator_thread, fp->activation_counter, atomic64_read(&(fp->failed_activation_counter)), fp->total_time/1000000000);
+				#else
+
+				snprintf(proc_stat_string, PROC_STAT_LEN, "Currently Ongoing: %s\nStart Address: 0x%016lx\nCreator thread: %d\n# of current activations: %lu\n# of failed activations: %ld\nTotal execution time in user space: %lu\n",
 								(fp->attached_thread == NULL) ? "no" : "yes", (unsigned long)fp->start_address, fp->creator_thread, fp->activation_counter, atomic64_read(&(fp->failed_activation_counter)), fp->total_time/1000000000);
 
+				#endif
 
 				if (*off >= strnlen(proc_stat_string, PROC_STAT_LEN))
 								return 0;

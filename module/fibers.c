@@ -106,6 +106,9 @@ pid_t do_ConvertThreadToFiber(pid_t thread_id)
         fp->attached_thread = gp;
         gp->selected_fiber = fp;
 
+        if (!spin_trylock(&fp->fiber_lock))
+                return -1;
+
         return fp->fiber_id;
 }
 
@@ -160,7 +163,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
         if (f == NULL)
                 return -1;
 
-        if (f->attached_thread != NULL) {
+        if (!spin_trylock(&f->fiber_lock) || f->attached_thread != NULL) {
                 atomic64_inc(&(f->failed_activation_counter));
                 return -1;
         }
@@ -183,6 +186,7 @@ long do_SwitchToFiber(pid_t fiber_id, pid_t thread_id)
 
         //detach fiber from current thread
         prev_fiber->attached_thread = NULL;
+        spin_unlock(&prev_fiber->fiber_lock);
 
         //restore next CPU context from the next fiber
         memcpy(prev_regs, &f->registers, sizeof(struct pt_regs));

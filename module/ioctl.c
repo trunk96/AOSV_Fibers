@@ -47,7 +47,6 @@ static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
                 return ret;
         }
         else if (cmd == IOCTL_SWITCH_TO_FIBER) {
-                unsigned long flags;
                 long ret;
                 struct fiber_arguments fa;
 
@@ -60,11 +59,7 @@ static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
                         return -EFAULT;
                 }
 
-                spin_lock_irqsave(&switch_lock, flags);
-
                 ret = do_SwitchToFiber(fa.fiber_id, thread_id);
-
-                spin_unlock_irqrestore(&switch_lock, flags);
                 return ret;
         }
         else if (cmd == IOCTL_FLS_ALLOC) {

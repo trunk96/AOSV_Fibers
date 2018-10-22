@@ -141,19 +141,30 @@ int proc_insert_dir(struct kretprobe_instance *k, struct pt_regs *regs)
 int exit_cleanup(struct kprobe * k, struct pt_regs * r)
 {
 				//current is dying
-				struct process *p = find_process_by_tgid(current->tgid);
+
+				struct process *p;
 				struct thread *t;
 				struct pt_regs *prev_regs;
 				struct fiber * prev_fiber;
 				struct fpu *prev_fpu;
 				long ret;
+
+				p = find_process_by_tgid(current->tgid);
+				//printk(KERN_DEBUG "%s: p value is %lu\n", KBUILD_MODNAME, (unsigned long)p);
 				if (p == NULL) {
+								//printk(KERN_DEBUG "%s: we are in the exit kprobe! PID %d\n", KBUILD_MODNAME, current->tgid);
 								return 0;
 				}
 
+
+
 				t = find_thread_by_pid(current->pid, p);
-				if (t == NULL)
+
+				if (t == NULL){
+
 								return 0;
+				}
+
 
 				ret = atomic64_dec_return(&(t->parent->active_threads));
 
@@ -170,9 +181,11 @@ int exit_cleanup(struct kprobe * k, struct pt_regs * r)
 								prev_fpu = &(prev_fiber->fpu);
 				        copy_fxregs_to_kernel(prev_fpu);
 
-								t->selected_fiber->attached_thread = NULL;
-
+								prev_fiber->attached_thread = NULL;
 								preempt_enable();
+
+								spin_unlock(&prev_fiber->fiber_lock);
+
 				}
 				hash_del_rcu(&(t->node));
 				kfree(t);

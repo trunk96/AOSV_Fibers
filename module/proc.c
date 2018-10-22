@@ -26,7 +26,7 @@ int proc_fiber_base_readdir(struct file *file, struct dir_context *ctx){
 				memset(fiber_base_stuff, 0, nents * sizeof(struct pid_entry));
 				hash_for_each_rcu(p->fibers, i, fp, node){
 								if (fp == NULL)
-																break; //we should never be here
+												break; //we should never be here
 								fiber_base_stuff[counter].name = fp->name;
 								fiber_base_stuff[counter].len = strlen(fp->name);
 								fiber_base_stuff[counter].mode = (S_IFREG|(S_IRUGO));
@@ -67,7 +67,7 @@ struct dentry *proc_fiber_base_lookup(struct inode *dir, struct dentry *dentry, 
 				memset(fiber_base_stuff, 0, nents * sizeof(struct pid_entry));
 				hash_for_each_rcu(p->fibers, i, fp, node){
 								if (fp == NULL)
-																break;   //we should never be here
+												break;   //we should never be here
 								fiber_base_stuff[counter].name = fp->name;
 								fiber_base_stuff[counter].len = strlen(fp->name);
 								fiber_base_stuff[counter].mode = (S_IFREG|(S_IRUGO));
@@ -101,7 +101,8 @@ ssize_t proc_fiber_read(struct file *filp, char __user *buf, size_t len, loff_t 
 								return 0;
 
 
-				kstrtoul(filp->f_path.dentry->d_name.name, 10, &fiber_id);
+				if(kstrtoul(filp->f_path.dentry->d_name.name, 10, &fiber_id))
+								return 0;
 				fp = find_fiber_by_id(fiber_id, ep);
 
 				if (fp == NULL)

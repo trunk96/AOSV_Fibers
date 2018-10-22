@@ -150,20 +150,13 @@ int exit_cleanup(struct kprobe * k, struct pt_regs * r)
 				long ret;
 
 				p = find_process_by_tgid(current->tgid);
-				//printk(KERN_DEBUG "%s: p value is %lu\n", KBUILD_MODNAME, (unsigned long)p);
-				if (p == NULL) {
-								//printk(KERN_DEBUG "%s: we are in the exit kprobe! PID %d\n", KBUILD_MODNAME, current->tgid);
+				if (p == NULL)
 								return 0;
-				}
-
-
 
 				t = find_thread_by_pid(current->pid, p);
 
-				if (t == NULL){
-
+				if (t == NULL)
 								return 0;
-				}
 
 
 				ret = atomic64_dec_return(&(t->parent->active_threads));
@@ -195,7 +188,7 @@ int exit_cleanup(struct kprobe * k, struct pt_regs * r)
 								struct fiber *f;
 								hash_for_each_rcu(p->fibers, i, f, node){
 																if (f == NULL)
-																								break;
+																				break;
 																kfree(f);
 								}
 								hash_del_rcu(&(p->node));

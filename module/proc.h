@@ -51,29 +51,13 @@ static inline struct pid *proc_pid(struct inode *inode)
 				return PROC_I(inode)->pid;
 }
 
-struct process * get_proc_process_fiber(struct inode *dir){
-				struct task_struct *task;
-				struct process *p = NULL;
-
-				rcu_read_lock();
-				task = pid_task(proc_pid(dir), PIDTYPE_PID);
-				if (task != NULL) {
-												p = find_process_by_tgid(task->tgid);
-				}
-				rcu_read_unlock();
-				return p;
-}
-
-
 struct file_operations f_fops = {
 				read: proc_fiber_read,
 };
 
 
 typedef int (*proc_pident_readdir_t)(struct file *file, struct dir_context *ctx, const struct pid_entry *ents, unsigned int nents);
-
 extern proc_pident_readdir_t readdir;
 
 typedef struct dentry * (*proc_pident_lookup_t)(struct inode *dir, struct dentry *dentry, const struct pid_entry *ents, unsigned int nents);
-
 extern proc_pident_lookup_t look;

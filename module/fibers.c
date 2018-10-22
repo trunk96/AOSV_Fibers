@@ -324,6 +324,6 @@ int process_cleanup(){
         }
         hash_del_rcu(&(p->node));
         kfree(p);
-        printk(KERN_DEBUG "%s: Cleanup for PID %d successfully done at process_cleanup!\n", KBUILD_MODNAME, current->tgid);
+        printk(KERN_DEBUG "%s: Cleanup for PID %d successfully done (it has closed the descriptor to /dev/fibers)\n", KBUILD_MODNAME, current->tgid);
         return 0;
 }

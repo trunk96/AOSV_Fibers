@@ -26,6 +26,7 @@ static int fiber_init(void){
 }
 
 static void fiber_cleanup(void){
+        //unregister the device as last thing
         unregister_kprobe_do_exit();
         unregister_kretprobe_finish_task_switch();
         unregister_kretprobe_proc_fiber_dir();

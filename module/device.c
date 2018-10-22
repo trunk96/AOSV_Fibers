@@ -7,31 +7,31 @@ static struct device *dev_fibers;
 
 static ssize_t fibers_read(struct file *f, char __user *buf, size_t len, loff_t *off)
 {
-		size_t i;
-        if (*off >= strnlen(string_message, MESSAGE_MAX_LEN))
-                return 0;
-        i = min_t(size_t, len, strnlen(string_message, MESSAGE_MAX_LEN));
-        if (copy_to_user(buf, (string_message+*off), i)) {
-                return -EFAULT;
-        }
-        *off += i;
-        return i;
+				size_t i;
+				if (*off >= strnlen(string_message, MESSAGE_MAX_LEN))
+				        return 0;
+				i = min_t(size_t, len, strnlen(string_message, MESSAGE_MAX_LEN));
+				if (copy_to_user(buf, (string_message+*off), i)) {
+				        return -EFAULT;
+				}
+				*off += i;
+				return i;
 
 }
 
 int fiber_open(struct inode *inode, struct file *file)
 {
-		if (!try_module_get(THIS_MODULE)){
-			return -1;
-		}
-		return 0;
+				if (!try_module_get(THIS_MODULE)){
+					return -1;
+				}
+				return 0;
 }
 
 int fiber_close(struct inode *inode, struct file *file)
 {
-	process_cleanup();
-	module_put(THIS_MODULE);
-	return 0;
+				process_cleanup();
+				module_put(THIS_MODULE);
+				return 0;
 }
 
 
@@ -75,7 +75,7 @@ int register_fiber_device(void)
 
         printk(KERN_DEBUG "%s: Device successfully registered in /dev/fibers with major number %ld\n", KBUILD_MODNAME, major);
 
-        //publish ioctl cmds here
+        //publish ioctl cmds here (so userspace library can read ioctl cmds)
         publish_message();
         return 0;
 

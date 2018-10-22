@@ -20,8 +20,6 @@ void publish_ioctl_message()
                  IOCTL_FLS_SETVALUE);
 }
 
-spinlock_t switch_lock = __SPIN_LOCK_UNLOCKED(switch_lock);
-
 static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
 {
         pid_t thread_id=current->pid;
@@ -63,6 +61,7 @@ static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
                 return ret;
         }
         else if (cmd == IOCTL_FLS_ALLOC) {
+                //arg has no sense in this context
                 long ret = (long) do_FlsAlloc(thread_id);
                 return ret;
         }
@@ -95,7 +94,9 @@ static long fibers_ioctl(struct file * f, unsigned int cmd, unsigned long arg)
                 }
 
                 ret = do_FlsGetValue(fa.index, thread_id);
-                copy_to_user((void*)fa.buffer, &ret, sizeof(long long));
+                if (copy_to_user((void*)fa.buffer, &ret, sizeof(long long))){
+                        return -EFAULT;
+                }
                 return 0;
         }
         else if (cmd == IOCTL_FLS_SETVALUE) {

@@ -20,7 +20,7 @@
 // TODO:
 // Here you should point to the invocation of your code!
 // See README.md for further details.
-#include "src/fiberlib_user.h"
+#include "../../fiberlib/fiberlib_user.h"
 
 #define ConvertThreadToFiber() ConvertThreadToFiber()
 #define CreateFiber(dwStackSize, lpStartAddress, lpParameter) CreateFiber(lpStartAddress, dwStackSize, lpParameter)

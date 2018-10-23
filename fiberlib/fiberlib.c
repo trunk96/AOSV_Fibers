@@ -1,5 +1,6 @@
 #include "fiberlib.h"
 #include "fiberlib_user.h"
+#include <errno.h>
 
 
 
@@ -7,7 +8,15 @@ __attribute__((constructor)) void fiberlib_init()
 {
         fd = open("/dev/fibers", O_RDONLY);
         char buf[256];
-        read(fd, buf, sizeof(buf));
+        int ret = 0;
+        int bytes_read = 0;
+        while(ret = read(fd, buf + bytes_read, sizeof(buf) - bytes_read) != 0){
+                if (ret < 0 && errno == -EINTR)
+                      continue;
+                if (ret < 0)
+                      return;
+                bytes_read+=ret;
+        }
         char *token;
         char *ptr;
         const char delimiter[2]="\n";
@@ -45,7 +54,9 @@ pid_t CreateFiber(user_function_t function_pointer, unsigned long stack_size, vo
                 .start_function_address = function_pointer,
                 .start_function_arguments = parameters,
         };
-        posix_memalign(&(f.stack_pointer), 16, stack_size);
+        if (posix_memalign(&(f.stack_pointer), 16, stack_size))
+                return -1;
+
         bzero(f.stack_pointer, stack_size);
         return (pid_t) ioctl(fd, ioctl_numbers[IOCTL_CREATE_FIBER], &f);
 }

@@ -60,40 +60,40 @@ int unregister_kretprobe_proc_fiber_dir(void)
 
 int entry_proc_lookup_dir(struct kretprobe_instance *k, struct pt_regs *regs)
 {
-	//take first 2 parameters of proc_tgid_base_lookup
-	struct inode *inode = (struct inode *) regs->di;
-	struct dentry *dentry = (struct dentry *) regs->si;
-	struct tgid_lookup_data data;
-	data.inode = inode;
-	data.dentry = dentry;
-	memcpy(k->data, &data, sizeof(struct tgid_lookup_data));
-	return 0;
+				//take first 2 parameters of proc_tgid_base_lookup
+				struct inode *inode = (struct inode *) regs->di;
+				struct dentry *dentry = (struct dentry *) regs->si;
+				struct tgid_lookup_data data;
+				data.inode = inode;
+				data.dentry = dentry;
+				memcpy(k->data, &data, sizeof(struct tgid_lookup_data));
+				return 0;
 }
 
 
 int proc_lookup_dir(struct kretprobe_instance *k, struct pt_regs *regs)
 {
-	//we have to insert "fibers" directory only in a fiberized process
-	struct tgid_lookup_data *data = (struct tgid_lookup_data *)(k->data);
-	struct process *p;
-	//unsigned long flags;
-	unsigned int pos;
-	struct task_struct * task = get_proc_task(data->inode);
+				//we have to insert "fibers" directory only in a fiberized process
+				struct tgid_lookup_data *data = (struct tgid_lookup_data *)(k->data);
+				struct process *p;
+				//unsigned long flags;
+				unsigned int pos;
+				struct task_struct * task = get_proc_task(data->inode);
 
-	p = find_process_by_tgid(task->tgid);
-	if (p == NULL)
-					return 0;
+				p = find_process_by_tgid(task->tgid);
+				if (p == NULL)
+								return 0;
 
-	//we are in a fiberized process, so please add "fibers" directory
+				//we are in a fiberized process, so please add "fibers" directory
 
-	if (nents == 0)
-					return 0; //readdir has to be called first, otherwise we cannot know the size of tgid_base_stuff
+				if (nents == 0)
+								return 0; //readdir has to be called first, otherwise we cannot know the size of tgid_base_stuff
 
-	//if we have nents!=0 then readdir was called before us and has setted nents to the size of tgid_base_stuff
-	pos = nents;
-	look(data->inode, data->dentry, additional - (pos - 2), pos - 1);
+				//if we have nents!=0 then readdir was called before us and has setted nents to the size of tgid_base_stuff
+				pos = nents;
+				look(data->inode, data->dentry, additional - (pos - 2), pos - 1);
 
-	return 0;
+				return 0;
 }
 
 

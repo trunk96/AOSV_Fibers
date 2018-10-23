@@ -9,6 +9,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 
+
 typedef enum IOCTL_TYPE {
         IOCTL_CONVERT_THREAD_TO_FIBER=0,
         IOCTL_CREATE_FIBER,
@@ -16,7 +17,8 @@ typedef enum IOCTL_TYPE {
         IOCTL_FLS_ALLOC,
         IOCTL_FLS_FREE,
         IOCTL_FLS_GETVALUE,
-        IOCTL_FLS_SETVALUE
+        IOCTL_FLS_SETVALUE,
+        MAX_IOCTL_CMDS
 } ioctl_type_t;
 
 typedef void (*user_function_t)(void* param);
@@ -24,7 +26,7 @@ typedef void (*user_function_t)(void* param);
 
 int fiberlib_initialized = 0;
 int fd;
-long ioctl_numbers[7]={0};
+long ioctl_numbers[MAX_IOCTL_CMDS]={0};
 
 struct fiber_arguments {
         //this struct is used in order to pass arguments to the IOCTL call

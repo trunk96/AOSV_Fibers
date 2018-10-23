@@ -22,7 +22,7 @@ static ssize_t fibers_read(struct file *f, char __user *buf, size_t len, loff_t 
 int fiber_open(struct inode *inode, struct file *file)
 {
 				if (!try_module_get(THIS_MODULE)){
-					return -1;
+								return -1;
 				}
 				return 0;
 }

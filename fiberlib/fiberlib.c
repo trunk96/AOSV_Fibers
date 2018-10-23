@@ -10,7 +10,7 @@ __attribute__((constructor)) void fiberlib_init()
         char buf[256];
         int ret = 0;
         int bytes_read = 0;
-        while(ret = read(fd, buf + bytes_read, sizeof(buf) - bytes_read) != 0){
+        while((ret = read(fd, buf + bytes_read, sizeof(buf) - bytes_read)) != 0){
                 if (ret < 0 && errno == -EINTR)
                       continue;
                 if (ret < 0)
@@ -25,10 +25,11 @@ __attribute__((constructor)) void fiberlib_init()
         int i = 0;
 
         while(token != NULL) {
-
                 ioctl_numbers[i] = strtol(token, &ptr, 10);
                 token = strtok(NULL, delimiter);
                 i++;
+                if (i == MAX_IOCTL_CMDS)
+                        break;
         }
         fiberlib_initialized = 1;
         return;

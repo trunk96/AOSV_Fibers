@@ -10,7 +10,7 @@ char string_message[MESSAGE_MAX_LEN] = "";
 
 void publish_ioctl_message()
 {
-        snprintf(string_message, MESSAGE_MAX_LEN, "%ld\n%ld\n%ld\n%ld\n%ld\n%ld\n%ld",
+        snprintf(string_message, MESSAGE_MAX_LEN, "%ld\n%ld\n%ld\n%ld\n%ld\n%ld\n%ld\n",
                  IOCTL_CONVERT_THREAD_TO_FIBER,
                  IOCTL_CREATE_FIBER,
                  IOCTL_SWITCH_TO_FIBER,
